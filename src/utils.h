@@ -1,2 +1,4 @@
-#define debug(args ...) printf("DEBUG: " args)
+#include <stdio.h>
+
+#define debug(args ...) fprintf(stderr, "DEBUG: " args)
 

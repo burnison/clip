@@ -1,68 +1,27 @@
-#include "config.h"
+#include "clipboard.h"
+#include "daemon.h"
+#include "gui.h"
 #include "utils.h"
 
-#include "clipboard.h"
-
-#include <stdio.h>
 #include <gtk/gtk.h>
-
-
-static int initialized;
-static Clipboard* clipboard;
-
-
-
-static void poll()
-{
-    GtkClipboard* provider = clip_get_provider(clipboard);
-    gchar* contents = gtk_clipboard_wait_for_text(provider);
-
-    if(contents == NULL){
-        debug("Cannot attain clipboard data.");
-        return;
-    }
-
-    const char* current = clip_get_text(clipboard);
-
-    if(g_strcmp0(current, contents)){
-        clip_set_text(clipboard, contents);
-        debug("Setting clipboard to '%s'.\n", contents);
-    }
-
-    if(contents != NULL){
-        g_free(contents);
-    }
-}
-
-static void initialize(void)
-{
-    debug("Initializing.\n");
-
-    GtkClipboard* provider = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-    clipboard = clip_new_clipboard(provider);
-
-    initialized = 1;
-}
-
-void start(void)
-{
-    debug("Starting up.\n");
-
-    if(!initialized){
-        initialize();
-    }
-
-    g_timeout_add_full(G_PRIORITY_DEFAULT, REFRESH, (GSourceFunc)poll, NULL, (GDestroyNotify)start);
-}
 
 int main(int argc, char** argv)
 {
+    debug("Starting up.\n");
+
     gtk_init(&argc, &argv);
 
-    initialized = 0;
-    start();
+    GtkClipboard* provider = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    Clipboard* clipboard = clip_clipboard_new(provider);
+
+    clip_daemon_init(clipboard);
+    clip_daemon_start();
+    clip_gui_init();
 
     gtk_main();
+
+    clip_gui_destroy();
+    clip_clipboard_free(clipboard);
 
     return 0;
 }
