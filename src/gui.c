@@ -12,7 +12,7 @@ static GtkMenu* menu;
 static void clip_gui_hotkey_handler(const char* keystring, void* data)
 {
     debug("Global hotkey pressed. Showing dialog.\n");
-    clip_gui_show();
+    gtk_main_quit();
 }
 
 void clip_gui_show()

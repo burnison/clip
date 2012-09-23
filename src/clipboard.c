@@ -6,16 +6,14 @@
 
 
 struct clipboard {
-    GtkClipboard* provider;
-    char* text;
+    char* current;
 };
 
 
-Clipboard* clip_clipboard_new(void* provider)
+Clipboard* clip_clipboard_new()
 {
     Clipboard* clipboard = g_malloc(sizeof(Clipboard));
-    clipboard->provider = provider;
-    clipboard->text = g_malloc(0);
+    clipboard->current = g_malloc(0);
 
     return clipboard;
 }
@@ -26,27 +24,18 @@ void clip_clipboard_free(Clipboard* clipboard)
         return;
     }
 
-    // Managed by GTK.
-    clipboard->provider = NULL;
-
-    g_free(clipboard->text);
+    g_free(clipboard->current);
     g_free(clipboard);
 }
 
-void* clip_clipboard_get_provider(Clipboard* clipboard)
+char* clip_clipboard_get_head(Clipboard* clipboard)
 {
-    return clipboard->provider;
+    return clipboard->current;
 }
 
-char* clip_clipboard_get_text(Clipboard* clipboard)
+void clip_clipboard_set_head(Clipboard* clipboard, char* text)
 {
-    return clipboard->text;
-}
+    g_free(clipboard->current);
 
-void clip_clipboard_set_text(Clipboard* clipboard, char* text)
-{
-    if(clipboard->text != NULL){
-        g_free(clipboard->text);
-    }
-    clipboard->text = g_strdup(text);
+    clipboard->current = g_strdup(text);
 }
