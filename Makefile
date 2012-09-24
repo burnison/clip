@@ -5,7 +5,7 @@ CFLAGS+=`pkg-config --cflags --libs glib-2.0`
 CFLAGS+=`pkg-config --cflags --libs x11`
 #CFLAGS_LIBS=$(shell pkg-config --cflags --libs sqlite3)
 
-PROJECT=clipboard
+PROJECT=clip
 
 SRC=src
 OUT=${SRC}/${PROJECT}

@@ -23,8 +23,13 @@ char* clip_provider_get_current(ClipboardProvider* provider)
 {
     return gtk_clipboard_wait_for_text(provider->clipboard);
 }
-
 void clip_provider_free_current(char* current)
 {
     g_free(current);
+}
+
+
+void clip_provider_set_current(ClipboardProvider* provider, char* text)
+{
+    gtk_clipboard_set_text(provider->clipboard, text, -1);
 }

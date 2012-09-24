@@ -12,11 +12,11 @@ int main(int argc, char** argv)
     gtk_init(&argc, &argv);
 
     ClipboardProvider* provider = clip_provider_new();
-    Clipboard* clipboard = clip_clipboard_new();
+    Clipboard* clipboard = clip_clipboard_new(provider);
 
     clip_daemon_init(provider, clipboard);
     clip_daemon_start();
-    clip_gui_init();
+    clip_gui_init(clipboard);
 
     gtk_main();
 
