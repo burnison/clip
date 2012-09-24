@@ -35,9 +35,23 @@ static void clip_gui_history_selected(GtkWidget* widget, gpointer data)
     clip_clipboard_set_active(clipboard, data);
 }
 
+//FIXME: Too much redundancy.
+static void clip_gui_add_empty_placeholder()
+{
+    GtkWidget* item = gtk_menu_item_new_with_label(NULL);
+    g_signal_connect((GObject*)item, "destroy", (GCallback)clip_gui_remove_signal_data, NULL);
+
+    char* empty = g_markup_printf_escaped("<i>%s</i>", EMPTY_MESSAGE);
+    GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)item);
+    gtk_label_set_markup((GtkLabel*)label, empty);
+    g_free(empty);
+
+    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+}
+
 static void clip_gui_add_menu_item(char* text)
 {
-    // This copy is going to be managed by the GTK label.
+    //FIXME: Never freed.
     char* copy = g_strdup(text);
     char* shortened = g_strndup(text, MAX_MENU_LENGTH);
 
@@ -49,6 +63,8 @@ static void clip_gui_add_menu_item(char* text)
     gtk_label_set_single_line_mode(label, TRUE);
 
     gtk_menu_shell_append((GtkMenuShell*)menu, item);
+
+    g_free(shortened);
 }
 
 static void clip_gui_sync_menu()
@@ -56,11 +72,13 @@ static void clip_gui_sync_menu()
     // Remove everything. Inefficient, but good enouh for now.
     gtk_container_foreach((GtkContainer*)menu, (GtkCallback)clip_gui_remove_menu_item, NULL);
 
-
     // Add all the new values.
     GList* history = clip_clipboard_get_history(clipboard);
-
-    g_list_foreach(history, (GFunc)clip_gui_add_menu_item, NULL); 
+    if(history == NULL){
+        clip_gui_add_empty_placeholder();
+    } else {
+        g_list_foreach(history, (GFunc)clip_gui_add_menu_item, NULL); 
+    }
 
     clip_clipboard_free_history(history);
 }

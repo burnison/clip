@@ -4,6 +4,7 @@
 #define GLOBAL_KEY "<Ctrl><Alt>P"
 
 #define MAX_MENU_LENGTH 100
+#define EMPTY_MESSAGE "--Clipboard Empty--"
 
 #define TRACE 1
 #define DEBUG 1
