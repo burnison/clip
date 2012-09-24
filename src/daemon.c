@@ -12,7 +12,6 @@ static Clipboard* clipboard;
 
 static gboolean clip_daemon_poll(gpointer data)
 {
-
     char* contents = clip_provider_get_current(provider);
     char* current = clip_clipboard_get_active(clipboard);
 

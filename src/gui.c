@@ -19,16 +19,22 @@ static void clip_gui_hotkey_handler(const char* keystring, void* user_data)
     clip_gui_show();
 }
 
-static void clip_gui_history_selected(GtkWidget* widget, char* text)
+static void clip_gui_history_selected(GtkWidget* widget)
 {
-    clip_clipboard_set_active(clipboard, text);
+    char* label = gtk_menu_item_get_label((GtkMenuItem*)widget);
+    clip_clipboard_set_active(clipboard, label);
 }
 
 static void clip_gui_add_menu_item(char* text)
 {
-    char* label = g_strndup(text, MAX_MENU_LENGTH);
-    GtkWidget* item = gtk_menu_item_new_with_label(label);
-    g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_history_selected, text);
+    char* copy = g_strdup(text);
+
+    GtkWidget* item = gtk_menu_item_new_with_label(copy);
+    g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_history_selected, NULL);
+
+    GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)item);
+    gtk_label_set_single_line_mode(label, TRUE);
+    gtk_label_set_max_width_chars(label, MAX_MENU_LENGTH);
 
     gtk_menu_shell_append((GtkMenuShell*)menu, item);
 }
