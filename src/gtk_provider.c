@@ -52,6 +52,11 @@ void clip_provider_free_current(char* current)
     g_free(current);
 }
 
+/**
+ * FIXME:
+ * If the active X11 selection is changed (even with the same string), the current selection is unhilighted. As such,
+ * only swap the two values if they are actually different.
+ */
 void clip_provider_set_current(ClipboardProvider* provider, char* text)
 {
     char* old_head = provider->head;
