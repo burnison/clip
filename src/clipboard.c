@@ -31,7 +31,6 @@ void clip_clipboard_free(Clipboard* clipboard)
     g_list_free_full(clipboard->history, g_free);
     g_free(clipboard->active);
     clipboard->provider = NULL;
-
     g_free(clipboard);
 }
 

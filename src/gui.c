@@ -21,7 +21,7 @@ static void clip_gui_hotkey_handler(const char* keystring, void* user_data)
 
 static void clip_gui_history_selected(GtkWidget* widget)
 {
-    char* label = gtk_menu_item_get_label((GtkMenuItem*)widget);
+    char* label = (char*)gtk_menu_item_get_label((GtkMenuItem*)widget);
     clip_clipboard_set_active(clipboard, label);
 }
 
