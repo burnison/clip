@@ -29,9 +29,27 @@ void clip_clipboard_free(Clipboard* clipboard)
     }
 
     g_list_free_full(clipboard->history, g_free);
+    clipboard->history = NULL;
+
     g_free(clipboard->active);
+    clipboard->active = NULL;
+
     clipboard->provider = NULL;
+
     g_free(clipboard);
+}
+
+
+
+void clip_clipboard_clear(Clipboard* clipboard)
+{
+    g_list_free_full(clipboard->history, (GDestroyNotify)g_free);
+    clipboard->history = NULL;
+
+    g_free(clipboard->active);
+    clipboard->active = NULL;
+
+    clip_provider_clear(clipboard->provider);
 }
 
 
@@ -41,22 +59,15 @@ static void clip_clipboard_remove_from_history(Clipboard* clipboard, char* text)
     GList* list = g_list_first(clipboard->history);
     while((list = g_list_next(list))){
         if(!g_strcmp0(list->data, text)){
-            debug("New clipboard value exists in history. Promoting.\n");
-
             char* data = list->data;
-            clipboard->history = g_list_remove(clipboard->history, data);
 
-            // This is the only place historical data gets freed.
+            clipboard->history = g_list_remove(clipboard->history, data);
             g_free(data);
             break;
         }
     }
 }
 
-char* clip_clipboard_get_active(Clipboard* clipboard)
-{
-    return clipboard->active;
-}
 
 void clip_clipboard_set_active(Clipboard* clipboard, char* text)
 {
@@ -67,13 +78,27 @@ void clip_clipboard_set_active(Clipboard* clipboard, char* text)
         return;
     }
 
+    // Set the new value.
+    g_free(clipboard->active);
+    clipboard->active = g_strdup(text);
+
+    // Remove the historical value, if it exists, and then prepend it.
     clip_clipboard_remove_from_history(clipboard, text);
+    // The previously-invoked remove_from_history function performs the free on this alloc.
+    char* data = g_strdup(text);
+    clipboard->history = g_list_prepend(clipboard->history, data);
 
-    char* copy = g_strdup(text);
-    clipboard->active = copy;
-    clipboard->history = g_list_prepend(clipboard->history, copy);
+    clip_provider_set_current(clipboard->provider, text);
+}
 
-    clip_provider_set_current(clipboard->provider, copy);
+char* clip_clipboard_get_active(Clipboard* clipboard)
+{
+    return g_strdup(clipboard->active);
+}
+
+void clip_clipboard_free_active(char* text)
+{
+    g_free(text);
 }
 
 
