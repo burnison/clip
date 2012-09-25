@@ -67,7 +67,7 @@ static void clip_gui_add_clear_item(void)
  */
 static void clip_gui_add_disable_item(void)
 {
-    return;
+    // Not yet implemented.
 }
 
 
@@ -91,7 +91,7 @@ static void clip_gui_add_empty_placeholder(void)
     gtk_widget_set_sensitive(item, FALSE);
 
     GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)item);
-    char* empty = g_markup_printf_escaped("<i>%s</i>", EMPTY_MESSAGE);
+    char* empty = g_markup_printf_escaped("<i>%s</i>", GUI_EMPTY_MESSAGE);
     gtk_label_set_markup((GtkLabel*)label, empty);
     g_free(empty);
 
@@ -101,7 +101,7 @@ static void clip_gui_add_empty_placeholder(void)
 static void clip_gui_add_menu_item(char* text)
 {
     // Create a shortened display text. Using a large block becomes clunky in GTK.
-    char* shortened = g_strndup(text, MAX_MENU_LENGTH);
+    char* shortened = g_strndup(text, GUI_DISPLAY_CHARACTERS);
     GtkWidget* item = gtk_menu_item_new_with_label(shortened);
     g_free(shortened);
 
@@ -144,8 +144,9 @@ static void clip_gui_sync_menu()
 void clip_gui_show()
 {
     trace("Showing history menu.\n");
+
     if(menu == NULL){
-        debug("GUI has not yet been initialized! Will return.\n");
+        warn("GUI has not yet been initialized!\n");
         return;
     }
     clip_gui_sync_menu();
@@ -156,18 +157,18 @@ void clip_gui_show()
 
 void clip_gui_init(Clipboard* _clipboard)
 {
-    debug("Creating new GUI menu.\n");
+    trace("Creating new GUI menu.\n");
     
     menu = (GtkMenu*)gtk_menu_new();
     clipboard = _clipboard;
 
     keybinder_init();
-    keybinder_bind(GLOBAL_KEY, clip_gui_callback_hotkey_handler, NULL);
+    keybinder_bind(GUI_GLOBAL_KEY, clip_gui_callback_hotkey_handler, NULL);
 }
 
 void clip_gui_destroy()
 {
-    keybinder_unbind(GLOBAL_KEY, clip_gui_callback_hotkey_handler);
+    keybinder_unbind(GUI_GLOBAL_KEY, clip_gui_callback_hotkey_handler);
 
     clipboard = NULL;
 

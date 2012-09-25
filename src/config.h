@@ -1,11 +1,13 @@
-#define PROGRAM "Clipboard"
-#define REFRESH 250
+#define PROGRAM "Clip"
 
-#define GLOBAL_KEY "<Ctrl><Alt>P"
+#define DAEMON_REFRESH_INTERVAL 250
 
-#define MAX_MENU_LENGTH 100
-#define MAX_MENU_ENTRIES 1000
-#define EMPTY_MESSAGE "--Clipboard Empty--"
+#define HISTORY_MAX_SIZE 300
+
+#define GUI_GLOBAL_KEY "<Ctrl><Alt>P"
+#define GUI_DISPLAY_CHARACTERS 80
+#define GUI_EMPTY_MESSAGE "--Clipboard Empty--"
 
 #define TRACE 1
 #define DEBUG 1
+#define WARN 1

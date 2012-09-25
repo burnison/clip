@@ -14,6 +14,7 @@ OBJECTS=
 OBJECTS+=${SRC}/clipboard.c
 OBJECTS+=${SRC}/daemon.c
 OBJECTS+=${SRC}/gui.c
+OBJECTS+=${SRC}/history.c
 OBJECTS+=${SRC}/keybinder.c
 OBJECTS+=${SRC}/gtk_provider.c
 OBJECTS+=${SRC}/main.c
