@@ -6,6 +6,10 @@
 
 #include <gtk/gtk.h>
 
+static const char* LABEL_CLEAR = "_Clear";
+static const char* LABEL_ENABLE = "Ena_ble";
+static const char* LABEL_DISABLE = "Disa_ble";
+
 // Not owned.
 static Clipboard* clipboard;
 
@@ -51,12 +55,17 @@ static void clip_gui_callback_clear_clipboard(void)
     clip_clipboard_clear(clipboard);
 }
 
+static void clip_gui_callback_disable_clipboard(void)
+{
+    clip_clipboard_toggle(clipboard);
+}
+
 /**
  * Adds a menu item to clear the clipboard's history.
  */
 static void clip_gui_add_clear_item(void)
 {
-    GtkWidget* item = gtk_menu_item_new_with_mnemonic("_Clear");
+    GtkWidget* item = gtk_menu_item_new_with_mnemonic(LABEL_CLEAR);
     g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_callback_clear_clipboard, NULL);
 
     gtk_menu_shell_append((GtkMenuShell*)menu, item);
@@ -65,9 +74,14 @@ static void clip_gui_add_clear_item(void)
 /**
  * Adds a menu item to disable the copying.
  */
-static void clip_gui_add_disable_item(void)
+static void clip_gui_add_toggle_item(void)
 {
-    // Not yet implemented.
+    const char* label = clip_clipboard_is_enabled(clipboard) ? LABEL_DISABLE : LABEL_ENABLE;
+
+    GtkWidget* item = gtk_menu_item_new_with_mnemonic(label);
+    g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_callback_disable_clipboard, NULL);
+
+    gtk_menu_shell_append((GtkMenuShell*)menu, item);
 }
 
 
@@ -124,6 +138,7 @@ static void clip_gui_sync_menu()
 
     // Top of menu.
     clip_gui_add_search_box();
+    clip_gui_add_toggle_item();
     gtk_menu_shell_append((GtkMenuShell*)menu, gtk_separator_menu_item_new());
 
     // Add the history.

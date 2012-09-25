@@ -9,6 +9,7 @@
 struct clipboard {
     ClipboardProvider* provider;
     ClipboardHistory* history;
+    gboolean enabled;
     char* active;
 };
 
@@ -18,6 +19,7 @@ Clipboard* clip_clipboard_new(ClipboardProvider* provider)
     Clipboard* clipboard = g_malloc(sizeof(Clipboard));
     clipboard->provider = provider;
     clipboard->history = clip_history_new();
+    clipboard->enabled = TRUE;
     clipboard->active = NULL;
 
     return clipboard;
@@ -39,6 +41,19 @@ void clip_clipboard_free(Clipboard* clipboard)
     clipboard->provider = NULL;
 
     g_free(clipboard);
+}
+
+
+
+void clip_clipboard_toggle(Clipboard* clipboard)
+{
+    trace("Toggling clipboard.");
+    clipboard->enabled = !clip_clipboard_is_enabled(clipboard);
+}
+
+gboolean clip_clipboard_is_enabled(Clipboard* clipboard)
+{
+    return clipboard->enabled;
 }
 
 
@@ -67,7 +82,12 @@ void clip_clipboard_set_active(Clipboard* clipboard, char* text)
     g_free(clipboard->active);
     clipboard->active = g_strdup(text);
 
-    clip_history_prepend(clipboard->history, text);
+    if(clip_clipboard_is_enabled(clipboard)){
+        clip_history_prepend(clipboard->history, text);
+    } else {
+        debug("Clipboard is disabled. Not appending to history.");
+    }
+
     clip_provider_set_current(clipboard->provider, text);
 }
 
