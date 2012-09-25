@@ -22,10 +22,8 @@ void clip_provider_free(ClipboardProvider* provider)
     if(provider == NULL){
         return;
     }
-
     provider->clipboard = NULL;
     provider->primary = NULL;
-
 	g_free(provider);
 }
 
@@ -96,6 +94,7 @@ void clip_provider_set_current(ClipboardProvider* provider, char* text)
 void clip_provider_clear(ClipboardProvider* provider)
 {
     trace("Clearing clipboards.\n");
+    // For some reason, the clear call isn't good enough. It has to be set to an empty string.
     gtk_clipboard_set_text(provider->primary, "", -1);
     gtk_clipboard_set_text(provider->clipboard, "", -1);
 

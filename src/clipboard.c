@@ -54,15 +54,19 @@ void clip_clipboard_clear(Clipboard* clipboard)
 
 
 
-static void clip_clipboard_remove_from_history(Clipboard* clipboard, char* text)
+static void clip_clipboard_remove_from_history(Clipboard* clipboard, GList* entry)
+{
+    char* data = entry->data;
+    clipboard->history = g_list_remove(clipboard->history, data);
+    g_free(data);
+}
+
+static void clip_clipboard_remove_from_history_if_exists(Clipboard* clipboard, char* text)
 {
     GList* list = g_list_first(clipboard->history);
     while((list = g_list_next(list))){
         if(!g_strcmp0(list->data, text)){
-            char* data = list->data;
-
-            clipboard->history = g_list_remove(clipboard->history, data);
-            g_free(data);
+            clip_clipboard_remove_from_history(clipboard, list);
             break;
         }
     }
@@ -83,10 +87,16 @@ void clip_clipboard_set_active(Clipboard* clipboard, char* text)
     clipboard->active = g_strdup(text);
 
     // Remove the historical value, if it exists, and then prepend it.
-    clip_clipboard_remove_from_history(clipboard, text);
+    clip_clipboard_remove_from_history_if_exists(clipboard, text);
     // The previously-invoked remove_from_history function performs the free on this alloc.
     char* data = g_strdup(text);
     clipboard->history = g_list_prepend(clipboard->history, data);
+
+    // There are more entries than allowable. Remove the tail.
+    if(g_list_length(clipboard->history) > MAX_MENU_ENTRIES){
+        GList* last = g_list_last(clipboard->history);
+        clip_clipboard_remove_from_history(clipboard, last);
+    }
 
     clip_provider_set_current(clipboard->provider, text);
 }

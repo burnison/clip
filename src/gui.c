@@ -54,7 +54,7 @@ static void clip_gui_callback_clear_clipboard(void)
 /**
  * Adds a menu item to clear the clipboard's history.
  */
-static void clip_gui_add_clear_item()
+static void clip_gui_add_clear_item(void)
 {
     GtkWidget* item = gtk_menu_item_new_with_mnemonic("_Clear");
     g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_callback_clear_clipboard, NULL);
@@ -63,9 +63,29 @@ static void clip_gui_add_clear_item()
 }
 
 /**
+ * Adds a menu item to disable the copying.
+ */
+static void clip_gui_add_disable_item(void)
+{
+    return;
+}
+
+
+static void clip_gui_add_search_box(void)
+{
+    GtkWidget* item = gtk_menu_item_new();
+
+    GtkWidget* textbox = gtk_entry_new();
+    gtk_container_add((GtkContainer*)item, textbox);
+
+    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+}
+
+
+/**
  * Adds a placeholder menu item to indicate the clipboard is empty.
  */
-static void clip_gui_add_empty_placeholder()
+static void clip_gui_add_empty_placeholder(void)
 {
     GtkWidget* item = gtk_menu_item_new_with_label(NULL);
     gtk_widget_set_sensitive(item, FALSE);
@@ -103,6 +123,7 @@ static void clip_gui_sync_menu()
     gtk_container_foreach((GtkContainer*)menu, (GtkCallback)clip_gui_callback_remove_menu_item, NULL);
 
     // Top of menu.
+    clip_gui_add_search_box();
     gtk_menu_shell_append((GtkMenuShell*)menu, gtk_separator_menu_item_new());
 
     // Add the history.
