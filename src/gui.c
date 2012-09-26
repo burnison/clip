@@ -14,7 +14,7 @@ static const char* LABEL_DISABLE = "Disable _History";
 static Clipboard* clipboard;
 
 // Owned.
-static GtkMenu* menu;
+static GtkWidget* menu;
 
 /**
  * Triggered by keybinder library.
@@ -28,9 +28,9 @@ static void clip_gui_callback_hotkey_handler(const char* keystring, void* user_d
 /**
  * Removes a menu item from the menu.
  */
-static void clip_gui_callback_remove_menu_item(GtkWidget* item)
+static void clip_gui_callback_remove_menu_item(GtkWidget* item, gpointer data)
 {
-    gtk_container_remove((GtkContainer*)menu, item);
+    gtk_container_remove(GTK_CONTAINER(menu), item);
 }
 
 /**
@@ -45,17 +45,17 @@ static void clip_gui_callback_remove_signal_data(GtkWidget* widget, gpointer dat
 /**
  * Invoked when a historical menu item has been selected.
  */
-static void clip_gui_callback_history_selected(GtkWidget* widget, gpointer data)
+static void clip_gui_callback_history_selected(GtkMenuItem* widget, gpointer data)
 {
     clip_clipboard_set_active(clipboard, data);
 }
 
-static void clip_gui_callback_clear_clipboard(void)
+static void clip_gui_callback_clear_clipboard(GtkMenuItem* item, gpointer data)
 {
     clip_clipboard_clear(clipboard);
 }
 
-static void clip_gui_callback_disable_clipboard(void)
+static void clip_gui_callback_disable_clipboard(GtkMenuItem* item, gpointer data)
 {
     clip_clipboard_toggle(clipboard);
 }
@@ -66,9 +66,9 @@ static void clip_gui_callback_disable_clipboard(void)
 static void clip_gui_add_clear_item(void)
 {
     GtkWidget* item = gtk_menu_item_new_with_mnemonic(LABEL_CLEAR);
-    g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_callback_clear_clipboard, NULL);
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_callback_clear_clipboard), NULL);
 
-    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
 /**
@@ -79,9 +79,9 @@ static void clip_gui_add_toggle_item(void)
     const char* label = clip_clipboard_is_enabled(clipboard) ? LABEL_DISABLE : LABEL_ENABLE;
 
     GtkWidget* item = gtk_menu_item_new_with_mnemonic(label);
-    g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_callback_disable_clipboard, NULL);
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_callback_disable_clipboard), NULL);
 
-    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
 
@@ -89,14 +89,13 @@ static void clip_gui_add_search_box(void)
 {
 //    GtkWidget* item = gtk_menu_item_new();
 //
-//    GtkEntry* textbox = (GtkEntry*)gtk_entry_new();
-//    gtk_container_add((GtkContainer*)item, (GtkWidget*)textbox);
+//    GtkWidget* textbox = gtk_entry_new();
+//    gtk_container_add(GTK_CONTAINER(item), textbox);
 //
 //    GtkEntryCompletion* completion = gtk_entry_completion_new();
-//    gtk_entry_set_completion(textbox, completion);
+//    gtk_entry_set_completion(GTK_ENTRY(textbox), GTK_ENTRY_COMPLETION(completion));
 //
-//
-//    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+//    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
 
@@ -108,13 +107,14 @@ static void clip_gui_add_empty_placeholder(void)
     GtkWidget* item = gtk_menu_item_new_with_label(NULL);
     gtk_widget_set_sensitive(item, FALSE);
 
-    GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)item);
+    GtkWidget* label = gtk_bin_get_child(GTK_BIN(item));
     char* empty = g_markup_printf_escaped("<i>%s</i>", GUI_EMPTY_MESSAGE);
-    gtk_label_set_markup((GtkLabel*)label, empty);
+    gtk_label_set_markup(GTK_LABEL(label), empty);
     g_free(empty);
 
-    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
+
 
 static void clip_gui_add_menu_item(char* text)
 {
@@ -125,25 +125,25 @@ static void clip_gui_add_menu_item(char* text)
 
     // The copy is freed by the destroy callback.
     char* copy = g_strdup(text);
-    g_signal_connect((GObject*)item, "activate", (GCallback)clip_gui_callback_history_selected, copy);
-    g_signal_connect((GObject*)item, "destroy", (GCallback)clip_gui_callback_remove_signal_data, copy);
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_callback_history_selected), copy);
+    g_signal_connect(G_OBJECT(item), "destroy", G_CALLBACK(clip_gui_callback_remove_signal_data), copy);
 
-    GtkLabel* label = (GtkLabel*)gtk_bin_get_child((GtkBin*)item);
+    GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
     gtk_label_set_single_line_mode(label, TRUE);
 
-    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 
 }
 
 static void clip_gui_sync_menu()
 {
     // Remove everything. Inefficient, but good enouh for now.
-    gtk_container_foreach((GtkContainer*)menu, (GtkCallback)clip_gui_callback_remove_menu_item, NULL);
+    gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)clip_gui_callback_remove_menu_item, NULL);
 
     // Top of menu.
     clip_gui_add_search_box();
     clip_gui_add_toggle_item();
-    gtk_menu_shell_append((GtkMenuShell*)menu, gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     // Add the history.
     GList* history = clip_clipboard_get_history(clipboard);
@@ -155,7 +155,7 @@ static void clip_gui_sync_menu()
     clip_clipboard_free_history(history);
 
     // Bottom of menu.
-    gtk_menu_shell_append((GtkMenuShell*)menu, gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
     clip_gui_add_clear_item();
 }
 
@@ -169,8 +169,8 @@ void clip_gui_show()
         return;
     }
     clip_gui_sync_menu();
-    gtk_widget_show_all((GtkWidget*)menu);
-    gtk_menu_popup(menu, NULL, NULL, NULL, NULL, 0, gtk_get_current_event_time());
+    gtk_widget_show_all(GTK_WIDGET(menu));
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, gtk_get_current_event_time());
 }
 
 
@@ -178,7 +178,9 @@ void clip_gui_init(Clipboard* _clipboard)
 {
     trace("Creating new GUI menu.\n");
     
-    menu = (GtkMenu*)gtk_menu_new();
+    menu = gtk_menu_new();
+    g_signal_connect(G_OBJECT(menu), "destroy", G_CALLBACK(gtk_main_quit), NULL);
+
     clipboard = _clipboard;
 
     keybinder_init();
