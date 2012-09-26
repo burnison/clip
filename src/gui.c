@@ -7,8 +7,8 @@
 #include <gtk/gtk.h>
 
 static const char* LABEL_CLEAR = "_Clear";
-static const char* LABEL_ENABLE = "Ena_ble";
-static const char* LABEL_DISABLE = "Disa_ble";
+static const char* LABEL_ENABLE = "Enable _History";
+static const char* LABEL_DISABLE = "Disable _History";
 
 // Not owned.
 static Clipboard* clipboard;
@@ -87,12 +87,16 @@ static void clip_gui_add_toggle_item(void)
 
 static void clip_gui_add_search_box(void)
 {
-    GtkWidget* item = gtk_menu_item_new();
-
-    GtkWidget* textbox = gtk_entry_new();
-    gtk_container_add((GtkContainer*)item, textbox);
-
-    gtk_menu_shell_append((GtkMenuShell*)menu, item);
+//    GtkWidget* item = gtk_menu_item_new();
+//
+//    GtkEntry* textbox = (GtkEntry*)gtk_entry_new();
+//    gtk_container_add((GtkContainer*)item, (GtkWidget*)textbox);
+//
+//    GtkEntryCompletion* completion = gtk_entry_completion_new();
+//    gtk_entry_set_completion(textbox, completion);
+//
+//
+//    gtk_menu_shell_append((GtkMenuShell*)menu, item);
 }
 
 

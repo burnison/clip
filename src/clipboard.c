@@ -47,7 +47,7 @@ void clip_clipboard_free(Clipboard* clipboard)
 
 void clip_clipboard_toggle(Clipboard* clipboard)
 {
-    trace("Toggling clipboard.");
+    trace("Toggling clipboard.\n");
     clipboard->enabled = !clip_clipboard_is_enabled(clipboard);
 }
 
@@ -71,7 +71,7 @@ void clip_clipboard_clear(Clipboard* clipboard)
 
 void clip_clipboard_set_active(Clipboard* clipboard, char* text)
 {
-    trace("Setting new active clipboard value, %s.\n", text);
+    trace("Setting new active clipboard value, \"%.*s...\".\n", 30, text);
 
     // If the active value is the same, just return.
     if(!g_strcmp0(clipboard->active, text)){

@@ -16,7 +16,7 @@ static gboolean clip_daemon_poll(gpointer data)
     char* active = clip_clipboard_get_active(clipboard);
 
     if(g_strcmp0(active, contents)){
-        debug("Setting clipboard to '%s'.\n", contents);
+        trace("Provider clipboard contents differ from active clipboard.\n");
         clip_clipboard_set_active(clipboard, contents);
     }
 
