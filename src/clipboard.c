@@ -85,7 +85,7 @@ void clip_clipboard_set_active(Clipboard* clipboard, char* text)
     if(clip_clipboard_is_enabled(clipboard)){
         clip_history_prepend(clipboard->history, text);
     } else {
-        debug("Clipboard is disabled. Not appending to history.");
+        debug("Clipboard is disabled. Not appending to history.\n");
     }
 
     clip_provider_set_current(clipboard->provider, text);
