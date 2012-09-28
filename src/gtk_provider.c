@@ -9,7 +9,7 @@ struct provider {
 	GtkClipboard* primary;
 };
 
-ClipboardProvider* clip_provider_new()
+ClipboardProvider* clip_provider_new(void)
 {
 	ClipboardProvider* provider = g_malloc(sizeof(ClipboardProvider));
 	provider->clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);

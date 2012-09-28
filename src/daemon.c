@@ -28,7 +28,7 @@ static gboolean clip_daemon_poll(gpointer data)
 
 
 
-static void clip_daemon_restart()
+static void clip_daemon_restart(void)
 {
     debug("Daemon apparently dead. Restarting.\n");
     clip_daemon_start();
@@ -50,7 +50,7 @@ void clip_daemon_init(ClipboardProvider* _provider, Clipboard* _clipboard)
     clipboard = _clipboard;
 }
 
-void clip_daemon_destroy()
+void clip_daemon_destroy(void)
 {
     clipboard = NULL;
     provider = NULL;
