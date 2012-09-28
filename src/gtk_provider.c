@@ -28,12 +28,12 @@ void clip_provider_free(ClipboardProvider* provider)
 }
 
 
-static char* clip_provider_get_current_clipboard(ClipboardProvider* provider)
+static char* clip_provider_get_clipboard(ClipboardProvider* provider)
 {
 	return gtk_clipboard_wait_for_text(provider->clipboard);
 }
 
-static char* clip_provider_get_current_primary(ClipboardProvider* provider)
+static char* clip_provider_get_primary(ClipboardProvider* provider)
 {
 	return gtk_clipboard_wait_for_text(provider->primary);
 }
@@ -41,8 +41,8 @@ static char* clip_provider_get_current_primary(ClipboardProvider* provider)
 
 char* clip_provider_get_current(ClipboardProvider* provider)
 {
-	char* on_clipboard = clip_provider_get_current_clipboard(provider);
-	char* on_primary = clip_provider_get_current_primary(provider);
+	char* on_clipboard = clip_provider_get_clipboard(provider);
+	char* on_primary = clip_provider_get_primary(provider);
 	char* selection = NULL;
 
 	// If primary is set and the two clipboards aren't synced, use primary.
@@ -72,7 +72,7 @@ void clip_provider_free_current(char* current)
  * It's possible that once this method has completed, the actual data objects of all clipboards are different. This is
  * alright.
  */
-static void clip_provider_set_current_if_different(GtkClipboard* clipboard, char* old, char* new)
+static void clip_provider_set_if_different(GtkClipboard* clipboard, char* old, char* new)
 {
 	if(g_strcmp0(old, new)){
 		gtk_clipboard_set_text(clipboard, new, -1);
@@ -81,11 +81,11 @@ static void clip_provider_set_current_if_different(GtkClipboard* clipboard, char
 
 void clip_provider_set_current(ClipboardProvider* provider, char* text)
 {
-	char* on_clipboard = clip_provider_get_current_clipboard(provider);
-	char* on_primary = clip_provider_get_current_primary(provider);
+	char* on_clipboard = clip_provider_get_clipboard(provider);
+	char* on_primary = clip_provider_get_primary(provider);
 
-	clip_provider_set_current_if_different(provider->clipboard, on_clipboard, text);
-	clip_provider_set_current_if_different(provider->primary, on_primary, text);
+	clip_provider_set_if_different(provider->clipboard, on_clipboard, text);
+	clip_provider_set_if_different(provider->primary, on_primary, text);
 
 	g_free(on_clipboard);
 	g_free(on_primary);
