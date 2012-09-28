@@ -91,8 +91,8 @@ static void clip_gui_add_toggle_item(void)
 
 static void clip_gui_add_search_box(void)
 {
-    GtkWidget* item = gtk_menu_item_new_with_label("Exit");
-    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(gtk_main_quit), NULL);
+//    GtkWidget* item = gtk_menu_item_new_with_label("Exit");
+//    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(gtk_main_quit), NULL);
 
 //    GtkWidget* textbox = gtk_entry_new();
 //    gtk_container_add(GTK_CONTAINER(item), textbox);
@@ -100,7 +100,7 @@ static void clip_gui_add_search_box(void)
 //    GtkEntryCompletion* completion = gtk_entry_completion_new();
 //    gtk_entry_set_completion(GTK_ENTRY(textbox), GTK_ENTRY_COMPLETION(completion));
 //
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+//    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
 
@@ -146,9 +146,7 @@ static void clip_gui_sync_menu(void)
     gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)clip_gui_cb_remove_menu_item, NULL);
 
     // Top of menu.
-    clip_gui_add_search_box();
-    clip_gui_add_toggle_item();
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+    //gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     // Add the history.
     GList* history = clip_clipboard_get_history(clipboard);
@@ -161,7 +159,9 @@ static void clip_gui_sync_menu(void)
 
     // Bottom of menu.
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+    clip_gui_add_toggle_item();
     clip_gui_add_clear_item();
+    clip_gui_add_search_box();
 }
 
 
