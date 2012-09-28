@@ -1,4 +1,5 @@
 .deps
+*.o
 
 src/clip
 
@@ -9,6 +10,7 @@ src/clip
 
 # automake
 /Makefile
+/src/Makefile
 
 # eclipse
 /.cproject
