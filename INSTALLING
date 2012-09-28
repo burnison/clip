@@ -1,9 +1,0 @@
-Required dependencies: 
-	gtk+-3.0
-	glib-2
-	libX11
-
-Fedora:
-	gtk3-devel
-	glib-devel
-	libX11-devel

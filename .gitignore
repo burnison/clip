@@ -1,5 +1,19 @@
+.deps
+
 src/clip
-.cproject
-.project
-.settings
-.sonar
+
+# autoconf
+/autom4te.cache
+/config.log
+/config.status
+
+# automake
+/Makefile
+
+# eclipse
+/.cproject
+/.project
+/.settings
+
+# sonar
+/.sonar
