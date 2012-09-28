@@ -91,16 +91,16 @@ static void clip_gui_add_toggle_item(void)
 
 static void clip_gui_add_search_box(void)
 {
-//    GtkWidget* item = gtk_menu_item_new();
-//
+    GtkWidget* item = gtk_menu_item_new_with_label("Exit");
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(gtk_main_quit), NULL);
+
 //    GtkWidget* textbox = gtk_entry_new();
 //    gtk_container_add(GTK_CONTAINER(item), textbox);
 //
 //    GtkEntryCompletion* completion = gtk_entry_completion_new();
 //    gtk_entry_set_completion(GTK_ENTRY(textbox), GTK_ENTRY_COMPLETION(completion));
 //
-//    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-    return;
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
 
@@ -184,7 +184,6 @@ void clip_gui_init(Clipboard* _clipboard)
     trace("Creating new GUI menu.\n");
 
     menu = gtk_menu_new();
-    g_signal_connect(G_OBJECT(menu), "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
     clipboard = _clipboard;
 
@@ -198,6 +197,6 @@ void clip_gui_destroy(void)
 
     clipboard = NULL;
 
-    g_free(menu);
+    gtk_widget_destroy(menu);
     menu = NULL;
 }
