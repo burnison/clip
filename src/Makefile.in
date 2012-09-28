@@ -61,9 +61,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_clip_OBJECTS = clipboard.$(OBJEXT) daemon.$(OBJEXT) gui.$(OBJEXT) \
-	history.$(OBJEXT) keybinder.$(OBJEXT) gtk_provider.$(OBJEXT) \
-	main.$(OBJEXT)
+am_clip_OBJECTS = daemon.$(OBJEXT) gtk_provider.$(OBJEXT) \
+	clipboard.$(OBJEXT) volatile_history.$(OBJEXT) gui.$(OBJEXT) \
+	keybinder.$(OBJEXT) main.$(OBJEXT)
 clip_OBJECTS = $(am_clip_OBJECTS)
 clip_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
@@ -183,9 +183,14 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CFLAGS = $(GTK_CFLAGS) ${GLIB_CFLAGS} ${X11_CFLAGS}
+AM_CFLAGS = -Wall -O2 -std=c99 $(GTK_CFLAGS) ${GLIB_CFLAGS} \
+	${X11_CFLAGS}
 LDADD = $(GTK_LIBS) ${GLIB_LIBS} ${X11_LIBS}
-clip_SOURCES = clipboard.c daemon.c gui.c history.c keybinder.c gtk_provider.c main.c
+clip_SOURCES = daemon.c gtk_provider.c \
+			   	clipboard.c volatile_history.c \
+				gui.c keybinder.c \
+				main.c
+
 all: all-am
 
 .SUFFIXES:
@@ -274,9 +279,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gtk_provider.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gui.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/history.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keybinder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/volatile_history.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
