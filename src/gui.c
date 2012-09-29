@@ -113,9 +113,8 @@ static void clip_gui_append_search(guint keyval)
 
 static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer data)
 {
-    GdkEventKey* e = ((GdkEventKey*)event);
-
-    switch(e->keyval){
+    guint keyval = ((GdkEventKey*)event)->keyval;
+    switch(keyval){
         case GDK_KEY_Escape:
         case GDK_KEY_Down:
         case GDK_KEY_Up:
@@ -126,18 +125,13 @@ static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer 
         case GDK_KEY_Return:
             clip_gui_end_search();
             break;
-
-        // Fall through after the first occurance time.
-        case GUI_SEARCH_LEADER:
         default:
-            clip_gui_append_search(e->keyval);
+            clip_gui_append_search(keyval);
             break;
     }
-
-    // Force the menu to get updated.
     clip_gui_update_menu();
 
-    // If we're in a search mode, drop all subsequent hooks..
+    // If we're in a search mode, drop all subsequent hooks.
     return clip_gui_in_search();
 }
 
