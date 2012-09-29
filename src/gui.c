@@ -194,12 +194,12 @@ static void clip_gui_set_normal_label(GtkWidget* item, char* text)
     gtk_label_set_label(label, text);
 }
 
-static void clip_gui_set_italic_label(GtkWidget* item, char* text)
+static void clip_gui_set_markedup_label(GtkWidget* item, char* format, char* text)
 {
     GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
-    char* italic = g_markup_printf_escaped("<i>%s</i>", text);
-    gtk_label_set_markup(label, italic);
-    g_free(italic);
+    char* markedup = g_markup_printf_escaped(format, text);
+    gtk_label_set_markup(label, markedup);
+    g_free(markedup);
 }
 
 static void clip_gui_update_menu(void)
@@ -207,7 +207,7 @@ static void clip_gui_update_menu(void)
     char* search_text = clip_gui_in_search()
         ? search_term->str
         : GUI_SEARCH_MESSAGE;
-    clip_gui_set_italic_label(menu_item_search, search_text);
+    clip_gui_set_markedup_label(menu_item_search, "<i><b>%s</b></i>", search_text);
 
     char* history_text = clip_clipboard_is_enabled(clipboard)
         ? GUI_HISTORY_DISABLE_MESSAGE
@@ -281,7 +281,7 @@ static void clip_gui_setup_menu(void)
     g_signal_connect(G_OBJECT(menu_item_history), "activate", G_CALLBACK(clip_gui_cb_disable_clipboard), NULL);
 
     menu_item_empty = g_object_ref(gtk_menu_item_new_with_label(GUI_EMPTY_MESSAGE));
-    clip_gui_set_italic_label(menu_item_empty, GUI_EMPTY_MESSAGE);
+    clip_gui_set_markedup_label(menu_item_empty, "<i>%s</i>", GUI_EMPTY_MESSAGE);
     gtk_widget_set_sensitive(menu_item_empty, FALSE);
 }
 
