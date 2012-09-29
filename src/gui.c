@@ -77,6 +77,7 @@ static void clip_gui_start_search(void)
     search_term = g_string_new(NULL);
 }
 
+
 static void clip_gui_append_search(guint keyval)
 {
     if(!clip_gui_in_search()){
@@ -110,6 +111,30 @@ static void clip_gui_append_search(guint keyval)
     trace("Searching for, '%s'.\n", search_term->str);
 }
 
+static void clip_gui_select_first_match(void)
+{
+    // Because this is regex, an empty string will always match.
+    if(search_term->len < 1){
+        return;
+    }
+    gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
+
+    GList* children = gtk_container_get_children(GTK_CONTAINER(menu));
+    GList* next = g_list_first(children);
+    while((next = g_list_next(next))){
+        GtkWidget* contents = gtk_bin_get_child(GTK_BIN(next->data));
+        if(!GTK_IS_LABEL(contents)){
+            continue;
+        }
+        GtkLabel* label = GTK_LABEL(contents);
+        const char* text = gtk_label_get_text(label);
+        if(g_regex_match_simple(search_term->str, text, G_REGEX_CASELESS, FALSE)){
+            gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), GTK_WIDGET(next->data));
+            break;
+        }
+    }
+    g_list_free(children);
+}
 
 static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer data)
 {
@@ -129,7 +154,12 @@ static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer 
             clip_gui_append_search(keyval);
             break;
     }
+
     clip_gui_update_menu();
+
+    if(clip_gui_in_search()){
+        clip_gui_select_first_match();
+    }
 
     // If we're in a search mode, drop all subsequent hooks.
     return clip_gui_in_search();
