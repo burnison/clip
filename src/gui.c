@@ -10,18 +10,20 @@
 static Clipboard* clipboard;
 
 // Owned.
-static GtkWidget* menu = NULL;
-static GtkWidget* menu_item_search = NULL;
-static GtkWidget* menu_item_clear = NULL;
-static GtkWidget* menu_item_history = NULL;
-static GtkWidget* menu_item_empty = NULL;
-static GString* search_term = NULL;
+static GtkWidget* menu;
+static GtkWidget* menu_item_search;
+static GtkWidget* menu_item_clear;
+static GtkWidget* menu_item_history;
+static GtkWidget* menu_item_empty;
+static GString* search_term;
+static int search_pos;
 
 
 /**
  * Usedby some callbacks.
  */
 static void clip_gui_update_menu(void);
+
 
 
 
@@ -56,62 +58,100 @@ static void clip_gui_cb_remove_signal_data(GtkWidget* widget, gpointer data)
 
 
 
-static gboolean clip_gui_in_search(void)
+/**
+ * Identifies if the menu is currently in search mode.
+ */
+static gboolean clip_gui_search_enabled(void)
 {
     return search_term != NULL;
 }
 
-static void clip_gui_end_search(void)
+/**
+ * Terminates the search mode.
+ */
+static void clip_gui_search_end(void)
 {
+    trace("Ending search.\n");
     if(search_term != NULL){
         g_string_free(search_term, TRUE);
         search_term = NULL;
+        search_pos = 0;
     }
 }
 
-static void clip_gui_start_search(void)
+/**
+ * Begins the search mode. If already in search mode, simply pass through.
+ */
+static void clip_gui_search_start(void)
 {
-    if(clip_gui_in_search()){
+    if(clip_gui_search_enabled()){
         return;
     }
+
+    trace("Starting new search.\n");
     search_term = g_string_new(NULL);
+    search_pos = 0;
 }
 
-
-static void clip_gui_append_search(guint keyval)
+/**
+ * Removes a character from the search buffer. If the buffer becomes empty, search mode is terminated.
+ */
+static void clip_gui_search_remove_char(void)
 {
-    if(!clip_gui_in_search()){
-        if(keyval == GUI_SEARCH_LEADER){
-            debug("Starting new search.\n");
-            clip_gui_start_search();
-        }
+    if(!clip_gui_search_enabled()){
+        warn("Attempted to remove a character when search mode not enabled.\n");
         return;
     }
 
-    if(!g_unichar_validate(keyval)){
-        warn("Tried to append a non-unicode character to the search term.");
-
-    } else if(keyval == GDK_KEY_BackSpace){
-        if(search_term->len > 0){
-            g_string_set_size(search_term, search_term->len  - 1);
-
-        } else { 
-            clip_gui_end_search();
-            return;
-        }
+    if(search_term->len > 0){
+        g_string_set_size(search_term, search_term->len  - 1);
+    } else {
+        clip_gui_search_end();
     }
+}
+
+/**
+ * Append a value onto the search buffer. This function also handles starting and stopping the search mode. If keyval is
+ * the search leader (i.e. the value that starts search mode), this function enters search mode and drops the character.
+ * <br />
+ * This function also uses the backspace character as a signal to remove on character off the buffer. When the buffer's
+ * size becomes zero, the search mode is terminated.
+ * <br />
+ * A tab character will attempt to select the next matching value.
+ * <br />
+ * Control characters are dropped.
+ *
+ * @param keyval a GDK key value.
+ */
+static void clip_gui_search_append(guint keyval)
+{
+    if(!clip_gui_search_enabled()){
+        if(keyval == GUI_SEARCH_LEADER){
+            clip_gui_search_start();
+        }
+        return;
+    } 
+    
+    if(!g_unichar_validate(keyval)){
+        debug("Tried to append a non-unicode character to the search term.\n");
+        return;
+    } 
 
     gunichar c = gdk_keyval_to_unicode(keyval);
     if(g_unichar_iscntrl(c)) {
-        debug("Ignoring control characters.\n");
+        debug("Control character detected. Dropping.\n");
         return;
     }
 
     g_string_append_unichar(search_term, c);
+    search_pos = 0;
     trace("Searching for, '%s'.\n", search_term->str);
 }
 
-static void clip_gui_select_first_match(void)
+/**
+ * Moves the currently selected item to the nth match on the menu.
+ */
+static void clip_gui_search_select_match(void)
 {
     // Because this is regex, an empty string will always match.
     if(search_term->len < 1){
@@ -119,8 +159,11 @@ static void clip_gui_select_first_match(void)
     }
     gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
 
+    int active_position = 0;
     GList* children = gtk_container_get_children(GTK_CONTAINER(menu));
     GList* next = g_list_first(children);
+
+    GtkWidget* first_match = NULL;
     while((next = g_list_next(next))){
         GtkWidget* contents = gtk_bin_get_child(GTK_BIN(next->data));
         if(!GTK_IS_LABEL(contents)){
@@ -128,11 +171,30 @@ static void clip_gui_select_first_match(void)
         }
         GtkLabel* label = GTK_LABEL(contents);
         const char* text = gtk_label_get_text(label);
+
         if(g_regex_match_simple(search_term->str, text, G_REGEX_CASELESS, FALSE)){
-            gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), GTK_WIDGET(next->data));
-            break;
+            // If this is the first match, hold onto it. We need to re-pivot when resetting search_pos.
+            if(first_match == NULL){
+                first_match = GTK_WIDGET(next->data);
+            }
+
+            // Skip the first nth records that match.
+            if(active_position++ == search_pos){
+                gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), GTK_WIDGET(next->data));
+                break;
+            }
         }
     }
+
+    debug("Active position is %d and search position is %d.\n", active_position, search_pos);
+    if(search_pos == active_position){
+        search_pos = 0;
+        if(first_match != NULL){
+            debug("Resetting to 0. Setting first match as active.\n");
+            gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), first_match);
+        }
+    }
+
     g_list_free(children);
 }
 
@@ -148,21 +210,31 @@ static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer 
         case GDK_KEY_Home:
         case GDK_KEY_End:
         case GDK_KEY_Return:
-            clip_gui_end_search();
+            clip_gui_search_end();
             break;
+
+        case GDK_KEY_BackSpace:
+            clip_gui_search_remove_char();
+            break;
+
+        case GDK_KEY_Tab:
+            trace("Increasing search position.\n");
+            search_pos++;
+            break;
+
         default:
-            clip_gui_append_search(keyval);
+            clip_gui_search_append(keyval);
             break;
     }
 
     clip_gui_update_menu();
 
-    if(clip_gui_in_search()){
-        clip_gui_select_first_match();
+    if(clip_gui_search_enabled()){
+        clip_gui_search_select_match();
     }
 
-    // If we're in a search mode, drop all subsequent hooks.
-    return clip_gui_in_search();
+    // If search mode is turned on, drop all subsequent callbacks (like mnemonics).
+    return clip_gui_search_enabled();
 }
 
 
@@ -188,15 +260,18 @@ static void clip_gui_cb_disable_clipboard(GtkMenuItem* item, gpointer data)
 
 
 
-static void clip_gui_set_normal_label(GtkWidget* item, char* text)
+/**
+ * Sets a label's text
+ */
+static void clip_gui_set_normal_label(GtkBin* item, char* text)
 {
-    GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
+    GtkLabel* label = GTK_LABEL(gtk_bin_get_child(item));
     gtk_label_set_label(label, text);
 }
 
-static void clip_gui_set_markedup_label(GtkWidget* item, char* format, char* text)
+static void clip_gui_set_markedup_label(GtkBin* item, char* format, char* text)
 {
-    GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
+    GtkLabel* label = GTK_LABEL(gtk_bin_get_child(item));
     char* markedup = g_markup_printf_escaped(format, text);
     gtk_label_set_markup(label, markedup);
     g_free(markedup);
@@ -204,15 +279,15 @@ static void clip_gui_set_markedup_label(GtkWidget* item, char* format, char* tex
 
 static void clip_gui_update_menu(void)
 {
-    char* search_text = clip_gui_in_search()
+    char* search_text = clip_gui_search_enabled()
         ? search_term->str
         : GUI_SEARCH_MESSAGE;
-    clip_gui_set_markedup_label(menu_item_search, "<i><b>%s</b></i>", search_text);
+    clip_gui_set_markedup_label(GTK_BIN(menu_item_search), "<i><b>%s</b></i>", search_text);
 
     char* history_text = clip_clipboard_is_enabled(clipboard)
         ? GUI_HISTORY_DISABLE_MESSAGE
         : GUI_HISTORY_ENABLE_MESSAGE;
-    clip_gui_set_normal_label(menu_item_history, history_text);
+    clip_gui_set_normal_label(GTK_BIN(menu_item_history), history_text);
 }
 
 
@@ -281,7 +356,7 @@ static void clip_gui_setup_menu(void)
     g_signal_connect(G_OBJECT(menu_item_history), "activate", G_CALLBACK(clip_gui_cb_disable_clipboard), NULL);
 
     menu_item_empty = g_object_ref(gtk_menu_item_new_with_label(GUI_EMPTY_MESSAGE));
-    clip_gui_set_markedup_label(menu_item_empty, "<i>%s</i>", GUI_EMPTY_MESSAGE);
+    clip_gui_set_markedup_label(GTK_BIN(menu_item_empty), "<i>%s</i>", GUI_EMPTY_MESSAGE);
     gtk_widget_set_sensitive(menu_item_empty, FALSE);
 }
 
