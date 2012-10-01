@@ -71,7 +71,14 @@ static gboolean clip_gui_search_enabled(void)
  */
 static void clip_gui_search_end(void)
 {
+    if(!clip_gui_search_enabled()){
+        return;
+    }
+
     trace("Ending search.\n");
+
+    gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
+
     if(search_term != NULL){
         g_string_free(search_term, TRUE);
         search_term = NULL;
@@ -166,7 +173,8 @@ static void clip_gui_search_select_match(void)
     GtkWidget* first_match = NULL;
     while((next = g_list_next(next))){
         GtkWidget* contents = gtk_bin_get_child(GTK_BIN(next->data));
-        if(!GTK_IS_LABEL(contents)){
+        // If it's not a label, or if the label is disabled, ignore.
+        if(!(GTK_IS_LABEL(contents) && gtk_widget_is_sensitive(contents))){
             continue;
         }
         GtkLabel* label = GTK_LABEL(contents);
@@ -338,6 +346,11 @@ static void clip_gui_sync_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_history);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_clear);
+#ifdef DEBUG
+    GtkWidget* menu_item_exit = gtk_menu_item_new_with_mnemonic(GUI_DEBUG_EXIT_MESSAGE);
+    g_signal_connect(G_OBJECT(menu_item_exit), "activate", G_CALLBACK(gtk_main_quit), NULL);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_exit);
+#endif
 }
 
 
@@ -395,8 +408,11 @@ void clip_gui_destroy(void)
 
     clipboard = NULL;
 
-    g_string_free(search_term, TRUE);
-    search_term = NULL;
+    // May be null if not in search mode.
+    if(search_term != NULL){
+        g_string_free(search_term, TRUE);
+        search_term = NULL;
+    }
 
     gtk_widget_destroy(menu);
     menu = NULL;

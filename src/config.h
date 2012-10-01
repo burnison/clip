@@ -12,6 +12,8 @@
 
 #define GUI_CLEAR_MESSAGE "_Clear"
 
+#define GUI_DEBUG_EXIT_MESSAGE "E_xit"
+
 #define GUI_HISTORY_ENABLE_MESSAGE "Enable _History"
 #define GUI_HISTORY_DISABLE_MESSAGE "Disable _History"
 

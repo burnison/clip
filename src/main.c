@@ -14,14 +14,15 @@ int main(int argc, char** argv)
     ClipboardProvider* provider = clip_provider_new();
     Clipboard* clipboard = clip_clipboard_new(provider);
 
-    clip_daemon_init(provider, clipboard);
-    clip_daemon_start();
+    Daemon* daemon = clip_daemon_new(provider, clipboard);
+    clip_daemon_start(daemon);
+
     clip_gui_init(clipboard);
 
     gtk_main();
 
     clip_gui_destroy();
-    clip_daemon_destroy();
+    clip_daemon_free(daemon);
     clip_clipboard_free(clipboard);
     clip_provider_free(provider);
 

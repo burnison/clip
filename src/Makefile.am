@@ -6,7 +6,7 @@ LDADD = $(GTK_LIBS) ${GLIB_LIBS} ${X11_LIBS}
 bin_PROGRAMS = clip
 
 clip_SOURCES = 	daemon.c gtk_provider.c \
-			   	clipboard.c volatile_history.c \
+			   	clipboard.c history.c \
 				gui.c keybinder.c \
 				main.c
 

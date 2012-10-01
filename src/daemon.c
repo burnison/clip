@@ -5,19 +5,24 @@
 
 #include <gtk/gtk.h>
 
-// Non-owned.
-static ClipboardProvider* provider;
-static Clipboard* clipboard;
+
+struct daemon {
+    ClipboardProvider* provider;
+    Clipboard* clipboard;
+};
 
 
-static gboolean clip_daemon_poll(gpointer data)
+/**
+ * @param daemon the GTK callback user data.
+ */
+static gboolean clip_daemon_poll(Daemon* daemon)
 {
-    char* contents = clip_provider_get_current(provider);
-    char* active = clip_clipboard_get_active(clipboard);
+    char* contents = clip_provider_get_current(daemon->provider);
+    char* active = clip_clipboard_get_active(daemon->clipboard);
 
     if(g_strcmp0(active, contents)){
         trace("Provider clipboard contents differ from active clipboard.\n");
-        clip_clipboard_set_active(clipboard, contents);
+        clip_clipboard_set_active(daemon->clipboard, contents);
     }
 
     clip_clipboard_free_active(active);
@@ -28,30 +33,33 @@ static gboolean clip_daemon_poll(gpointer data)
 
 
 
-static void clip_daemon_restart(void)
+static void clip_daemon_restart(Daemon* daemon)
 {
     debug("Daemon apparently dead. Restarting.\n");
-    clip_daemon_start();
+    clip_daemon_start(daemon);
 }
 
-void clip_daemon_start(void)
+void clip_daemon_start(Daemon* daemon)
 {
     trace("Creating daemon task.\n");
     g_timeout_add_full(G_PRIORITY_DEFAULT, DAEMON_REFRESH_INTERVAL,
-            (GSourceFunc)clip_daemon_poll, NULL, (GDestroyNotify)clip_daemon_restart);
+            (GSourceFunc)clip_daemon_poll, daemon, (GDestroyNotify)clip_daemon_restart);
 }
 
 
 
-void clip_daemon_init(ClipboardProvider* _provider, Clipboard* _clipboard)
+Daemon* clip_daemon_new(ClipboardProvider* provider, Clipboard* clipboard)
 {
     trace("Initializing daemon.\n");
-    provider = _provider;
-    clipboard = _clipboard;
+    Daemon* daemon = g_malloc(sizeof(Daemon));
+    daemon->provider = provider;
+    daemon->clipboard = clipboard;
+    return daemon;
 }
 
-void clip_daemon_destroy(void)
+void clip_daemon_free(Daemon* daemon)
 {
-    clipboard = NULL;
-    provider = NULL;
+    daemon->clipboard = NULL;
+    daemon->provider = NULL;
+    g_free(daemon);
 }

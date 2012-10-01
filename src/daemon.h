@@ -1,7 +1,9 @@
 #include "clipboard.h"
 #include "provider.h"
 
-void clip_daemon_init(ClipboardProvider* provider, Clipboard* clipboard);
-void clip_daemon_destroy(void);
+typedef struct daemon Daemon;
 
-void clip_daemon_start(void);
+Daemon* clip_daemon_new(ClipboardProvider* provider, Clipboard* clipboard);
+void clip_daemon_free(Daemon* daemon);
+
+void clip_daemon_start(Daemon* daemon);
