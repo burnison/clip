@@ -36,14 +36,6 @@ static void clip_gui_cb_hotkey_handler(const char* keystring, void* user_data)
     clip_gui_show();
 }
 
-/**
- * Removes a menu item from the menu.
- */
-static void clip_gui_cb_remove_menu_item(GtkWidget* item, gpointer data)
-{
-    gtk_container_remove(GTK_CONTAINER(menu), item);
-}
-
 
 /**
  * Frees the historical text (i.e. clipboard contents) used in a signal. Called
@@ -221,6 +213,10 @@ static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer 
             clip_gui_search_end();
             break;
 
+		case GDK_KEY_Delete:
+			debug("Delete hook not yet implemented.\n");
+			break;
+
         case GDK_KEY_BackSpace:
             clip_gui_search_remove_char();
             break;
@@ -325,7 +321,7 @@ static void clip_gui_add_menu_item(char* text)
 static void clip_gui_sync_menu(void)
 {
     // Remove everything. Inefficient, but good enouh for now.
-    gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)clip_gui_cb_remove_menu_item, NULL);
+    gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)gtk_container_remove, NULL);
 
     clip_gui_update_menu();
 
