@@ -4,10 +4,31 @@
 #include "utils.h"
 
 #include <gtk/gtk.h>
+#include <stdlib.h>
+
+
+static gboolean clip_main_init(void)
+{
+    const char* directory = clip_config_get_home_dir();
+    if(g_file_test(directory, G_FILE_TEST_EXISTS)){
+        if(!g_file_test(directory, G_FILE_TEST_IS_DIR)){
+            warn("Application directory, %s exists, but is a normal file.", directory);
+            return FALSE;
+        }
+    } else {
+        return !g_mkdir(directory, 0750);
+    }
+    return TRUE;
+}
+
 
 int main(int argc, char** argv)
 {
     debug("Starting up.\n");
+    if(!clip_main_init()){
+        error("Cannot initialize application. Terminating.\n");
+        exit(1);
+    }
 
     gtk_init(&argc, &argv);
 
@@ -25,6 +46,8 @@ int main(int argc, char** argv)
     clip_daemon_free(daemon);
     clip_clipboard_free(clipboard);
     clip_provider_free(provider);
+
+    clip_config_destroy();
 
     return 0;
 }

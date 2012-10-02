@@ -63,12 +63,12 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_clip_OBJECTS = daemon.$(OBJEXT) gtk_provider.$(OBJEXT) \
 	clipboard.$(OBJEXT) history.$(OBJEXT) gui.$(OBJEXT) \
-	keybinder.$(OBJEXT) main.$(OBJEXT)
+	keybinder.$(OBJEXT) utils.$(OBJEXT) main.$(OBJEXT)
 clip_OBJECTS = $(am_clip_OBJECTS)
 clip_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 clip_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -136,6 +136,8 @@ PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SQLITE3_CFLAGS = @SQLITE3_CFLAGS@
+SQLITE3_LIBS = @SQLITE3_LIBS@
 STRIP = @STRIP@
 VERSION = @VERSION@
 X11_CFLAGS = @X11_CFLAGS@
@@ -184,12 +186,12 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = -Wall -O2 -std=c99 $(GTK_CFLAGS) ${GLIB_CFLAGS} \
-	${X11_CFLAGS}
-LDADD = $(GTK_LIBS) ${GLIB_LIBS} ${X11_LIBS}
+	${X11_CFLAGS} ${SQLITE3_CFLAGS}
+LDADD = $(GTK_LIBS) ${GLIB_LIBS} ${X11_LIBS} ${SQLITE3_LIBS}
 clip_SOURCES = daemon.c gtk_provider.c \
 			   	clipboard.c history.c \
 				gui.c keybinder.c \
-				main.c
+				utils.c main.c
 
 all: all-am
 
@@ -282,6 +284,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/history.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keybinder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utils.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

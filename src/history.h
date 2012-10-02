@@ -1,6 +1,7 @@
 #include <glib.h>
 
 typedef struct history ClipboardHistory;
+typedef struct history ClipboardEntry;
 
 ClipboardHistory* clip_history_new(void);
 void clip_history_free(ClipboardHistory* history);

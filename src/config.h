@@ -1,8 +1,11 @@
 #define PROGRAM "Clip"
+#define CLIP_HOME ".clip"
 
 #define DAEMON_REFRESH_INTERVAL 250
 
-#define HISTORY_MAX_SIZE 300
+
+#define HISTORY_MAX_SIZE 500
+#define HISTORY_FILE "history.sqlite"
 
 
 #define GUI_SEARCH_LEADER '/'
