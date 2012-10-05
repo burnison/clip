@@ -23,8 +23,6 @@
 #define GUI_GLOBAL_KEY "<Ctrl><Alt>P"
 #define GUI_DISPLAY_CHARACTERS 80
 
-#define DEBUG 1
-
 #define LOG_TRACE 1
 #define LOG_DEBUG 1
 #define LOG_WARN 1
