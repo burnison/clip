@@ -39,7 +39,7 @@ static char* clip_provider_get_primary(ClipboardProvider* provider)
 }
 
 
-char* clip_provider_get_current(ClipboardProvider* provider)
+static char* clip_provider_get_synced(ClipboardProvider* provider)
 {
 	char* on_clipboard = clip_provider_get_clipboard(provider);
 	char* on_primary = clip_provider_get_primary(provider);
@@ -55,8 +55,13 @@ char* clip_provider_get_current(ClipboardProvider* provider)
 	selection = g_strdup(selection);
 	g_free(on_clipboard);
 	g_free(on_primary);
+    return selection;
+}
 
-	return selection;
+
+char* clip_provider_get_current(ClipboardProvider* provider)
+{
+	return clip_provider_get_synced(provider);
 }
 
 void clip_provider_free_current(char* current)
@@ -81,14 +86,12 @@ static void clip_provider_set_if_different(GtkClipboard* clipboard, char* old, c
 
 void clip_provider_set_current(ClipboardProvider* provider, char* text)
 {
-	char* on_clipboard = clip_provider_get_clipboard(provider);
-	char* on_primary = clip_provider_get_primary(provider);
+    char* current = clip_provider_get_synced(provider);
 
-	clip_provider_set_if_different(provider->clipboard, on_clipboard, text);
-	clip_provider_set_if_different(provider->primary, on_primary, text);
+	clip_provider_set_if_different(provider->clipboard, current, text);
+	clip_provider_set_if_different(provider->primary, current, text);
 
-	g_free(on_clipboard);
-	g_free(on_primary);
+    g_free(current);
 }
 
 void clip_provider_clear(ClipboardProvider* provider)

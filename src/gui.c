@@ -15,6 +15,9 @@ static GtkWidget* menu_item_search;
 static GtkWidget* menu_item_clear;
 static GtkWidget* menu_item_history;
 static GtkWidget* menu_item_empty;
+
+static GList* history;
+
 static GString* search_term;
 static int search_pos;
 
@@ -22,40 +25,10 @@ static int search_pos;
 /**
  * Usedby some callbacks.
  */
+static void clip_gui_set_display_text(GtkWidget* menu_item, ClipboardHistoryEntry* entry);
 static void clip_gui_update_menu(void);
-
-
-
-
-/**
- * Triggered by keybinder library.
- */
-static void clip_gui_cb_hotkey_handler(const char* keystring, void* user_data)
-{
-    trace("Global hotkey pressed. Showing dialog.\n");
-    clip_gui_show();
-}
-
-/**
- * Removes a menu item from the menu.
- */
-static void clip_gui_cb_remove_menu_item(GtkWidget* item, gpointer data)
-{
-    gtk_container_remove(GTK_CONTAINER(menu), item);
-}
-
-
-/**
- * Frees the historical text (i.e. clipboard contents) used in a signal. Called
- * when a menu item used for historical values is destroy.
- */
-static void clip_gui_cb_remove_signal_data(GtkWidget* widget, gpointer data)
-{
-    g_free(data);
-}
-
-
-
+static void clip_gui_set_normal_label(GtkBin* item, char* text);
+static void clip_gui_set_markedup_label(GtkBin* item, char* format, char* text);
 
 
 /**
@@ -247,25 +220,69 @@ static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer 
 }
 
 
+
+static gboolean clip_gui_cb_toggle_sticky(GtkWidget* widget, GdkEvent* event, gpointer data)
+{
+    // Only handle right button press.
+    if(((GdkEventButton*)event)->button != 3) {
+        return FALSE;
+    }
+
+    clip_clipboard_toggle_lock(clipboard, data);
+    clip_gui_set_display_text(widget, data);
+
+    return TRUE;
+}
+
 /**
  * Invoked when a historical menu item has been selected.
  */
-static void clip_gui_cb_history_selected(GtkMenuItem* widget, gpointer data)
+static gboolean clip_gui_cb_history_selected(GtkMenuItem* widget, gpointer data)
 {
-    clip_clipboard_set_active(clipboard, data);
+    trace("History item selected.\n");
+
+    char* text = clip_history_entry_get_text(data);
+    clip_clipboard_set_active(clipboard, text);
+    clip_history_entry_free_text(text);
+
+    return FALSE;
 }
 
 
-static void clip_gui_cb_clear_clipboard(GtkMenuItem* item, gpointer data)
+static gboolean clip_gui_cb_clear_clipboard(GtkMenuItem* item, gpointer data)
 {
+    trace("Clearing clipboard history.\n");
     clip_clipboard_clear(clipboard);
+    return FALSE;
 }
 
 
-static void clip_gui_cb_disable_clipboard(GtkMenuItem* item, gpointer data)
+static gboolean clip_gui_cb_toggle_clipboard(GtkMenuItem* item, gpointer data)
 {
+    trace("Toggle clipboard history.\n");
     clip_clipboard_toggle(clipboard);
+    return FALSE;
 }
+
+/**
+ * Triggered by keybinder library.
+ */
+static void clip_gui_cb_hotkey_handler(const char* keystring, void* user_data)
+{
+    trace("Global hotkey pressed. Showing dialog.\n");
+    clip_gui_show();
+}
+
+/**
+ * Removes a menu item from the menu.
+ */
+static void clip_gui_cb_remove_menu_item(GtkWidget* item, gpointer data)
+{
+    gtk_container_remove(GTK_CONTAINER(menu), item);
+}
+
+
+
 
 
 
@@ -302,19 +319,29 @@ static void clip_gui_update_menu(void)
 
 
 
-
-
-static void clip_gui_add_menu_item(char* text)
+static void clip_gui_set_display_text(GtkWidget* menu_item, ClipboardHistoryEntry* entry)
 {
-    // Create a shortened display text. Large block becomes clunky in GTK.
-    char* shortened = g_strndup(text, GUI_DISPLAY_CHARACTERS);
-    GtkWidget* item = gtk_menu_item_new_with_label(shortened);
-    g_free(shortened);
+    char* entry_text = clip_history_entry_get_text(entry);
+    char* shortened = g_strndup(entry_text, GUI_DISPLAY_CHARACTERS);
 
-    // The copy is freed by the destroy callback.
-    char* copy = g_strdup(text);
-    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_selected), copy);
-    g_signal_connect(G_OBJECT(item), "destroy", G_CALLBACK(clip_gui_cb_remove_signal_data), copy);
+    if(clip_history_entry_get_locked(entry)){
+        clip_gui_set_markedup_label(GTK_BIN(menu_item), "<b>%s</b>", shortened);
+    } else {
+        clip_gui_set_normal_label(GTK_BIN(menu_item), shortened);
+    }
+
+    g_free(shortened);
+    clip_history_entry_free_text(entry_text);
+}
+
+static void clip_gui_add_menu_item(ClipboardHistoryEntry* entry)
+{
+    GtkWidget* item = gtk_menu_item_new_with_label(NULL);
+    clip_gui_set_display_text(item, entry);
+
+    g_signal_connect(G_OBJECT(item), "button-release-event", G_CALLBACK(clip_gui_cb_toggle_sticky), entry);
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_selected), entry);
+
 
     GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
     gtk_label_set_single_line_mode(label, TRUE);
@@ -334,19 +361,20 @@ static void clip_gui_sync_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_search);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
-    // Add the history.
-    GList* history = clip_clipboard_get_history(clipboard);
+    // Release the history from last time.
+    clip_clipboard_free_history(history);
+    history = clip_clipboard_get_history(clipboard);
     if(history == NULL){
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_empty);
     } else {
         g_list_foreach(history, (GFunc)clip_gui_add_menu_item, NULL); 
     }
-    clip_clipboard_free_history(history);
 
     // Bottom of menu.
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_history);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_clear);
+
 #ifdef DEBUG
     GtkWidget* menu_item_exit = gtk_menu_item_new_with_mnemonic(GUI_DEBUG_EXIT_MESSAGE);
     g_signal_connect(G_OBJECT(menu_item_exit), "activate", G_CALLBACK(gtk_main_quit), NULL);
@@ -367,7 +395,7 @@ static void clip_gui_setup_menu(void)
     g_signal_connect(G_OBJECT(menu_item_clear), "activate", G_CALLBACK(clip_gui_cb_clear_clipboard), NULL);
 
     menu_item_history = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_HISTORY_DISABLE_MESSAGE));
-    g_signal_connect(G_OBJECT(menu_item_history), "activate", G_CALLBACK(clip_gui_cb_disable_clipboard), NULL);
+    g_signal_connect(G_OBJECT(menu_item_history), "activate", G_CALLBACK(clip_gui_cb_toggle_clipboard), NULL);
 
     menu_item_empty = g_object_ref(gtk_menu_item_new_with_label(GUI_EMPTY_MESSAGE));
     clip_gui_set_markedup_label(GTK_BIN(menu_item_empty), "<i>%s</i>", GUI_EMPTY_MESSAGE);
@@ -384,6 +412,7 @@ void clip_gui_show(void)
         warn("GUI has not yet been initialized!\n");
         return;
     }
+
     clip_gui_sync_menu();
 
     gtk_widget_show_all(menu);
@@ -406,6 +435,9 @@ void clip_gui_init(Clipboard* _clipboard)
 void clip_gui_destroy(void)
 {
     keybinder_unbind(GUI_GLOBAL_KEY, clip_gui_cb_hotkey_handler);
+
+    clip_clipboard_free_history(history);
+    history = NULL;
 
     clipboard = NULL;
 

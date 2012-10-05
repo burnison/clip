@@ -14,6 +14,7 @@ struct clipboard {
 };
 
 
+
 Clipboard* clip_clipboard_new(ClipboardProvider* provider)
 {
     Clipboard* clipboard = g_malloc(sizeof(Clipboard));
@@ -44,16 +45,53 @@ void clip_clipboard_free(Clipboard* clipboard)
 }
 
 
+void clip_clipboard_set_active(Clipboard* clipboard, char* text)
+{
+    trace("Setting new active clipboard value, \"%.*s...\".\n", 30, text);
+
+    // If the active value is the same, just return.
+    if(!g_strcmp0(clipboard->active, text)){
+        trace("Clipboard's active text matches new text. Ignoring.\n");
+        return;
+    }
+
+    // Set the new value.
+    g_free(clipboard->active);
+    clipboard->active = g_strdup(text);
+
+    clip_provider_set_current(clipboard->provider, text);
+
+    if(clip_clipboard_is_enabled(clipboard)){
+        clip_history_prepend(clipboard->history, text);
+    } else {
+        debug("Clipboard is disabled. Not appending to history.\n");
+    }
+}
+
+char* clip_clipboard_get_active(Clipboard* clipboard)
+{
+    return g_strdup(clipboard->active);
+}
+
+void clip_clipboard_free_active(char* text)
+{
+    g_free(text);
+}
+
+
+
+
+
+
+gboolean clip_clipboard_is_enabled(Clipboard* clipboard)
+{
+    return clipboard->enabled;
+}
 
 void clip_clipboard_toggle(Clipboard* clipboard)
 {
     trace("Toggling clipboard.\n");
     clipboard->enabled = !clip_clipboard_is_enabled(clipboard);
-}
-
-gboolean clip_clipboard_is_enabled(Clipboard* clipboard)
-{
-    return clipboard->enabled;
 }
 
 
@@ -67,38 +105,14 @@ void clip_clipboard_clear(Clipboard* clipboard)
     clipboard->active = NULL;
 }
 
-
-
-void clip_clipboard_set_active(Clipboard* clipboard, char* text)
+void clip_clipboard_remove(Clipboard* clipboard, ClipboardHistoryEntry* entry)
 {
-    trace("Setting new active clipboard value, \"%.*s...\".\n", 30, text);
-
-    // If the active value is the same, just return.
-    if(!g_strcmp0(clipboard->active, text)){
-        return;
-    }
-
-    // Set the new value.
-    g_free(clipboard->active);
-    clipboard->active = g_strdup(text);
-
-    if(clip_clipboard_is_enabled(clipboard)){
-        clip_history_prepend(clipboard->history, text);
-    } else {
-        debug("Clipboard is disabled. Not appending to history.\n");
-    }
-
-    clip_provider_set_current(clipboard->provider, text);
+    clip_history_remove(clipboard->history, entry);
 }
 
-char* clip_clipboard_get_active(Clipboard* clipboard)
+void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardHistoryEntry* entry)
 {
-    return g_strdup(clipboard->active);
-}
-
-void clip_clipboard_free_active(char* text)
-{
-    g_free(text);
+    clip_history_entry_toggle_lock(clipboard->history, entry);
 }
 
 
