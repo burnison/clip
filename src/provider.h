@@ -17,11 +17,14 @@
  * along with Clip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <glib.h>
+
 typedef struct provider ClipboardProvider;
 
 ClipboardProvider* clip_provider_new(void);
 void clip_provider_free(ClipboardProvider* provider);
 
+gboolean clip_provider_current_available(ClipboardProvider* provider);
 char* clip_provider_get_current(ClipboardProvider* provider);
 void clip_provider_free_current(char* current);
 

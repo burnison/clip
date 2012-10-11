@@ -71,19 +71,24 @@ void clip_clipboard_set_active(Clipboard* clipboard, char* text)
     if(!g_strcmp0(clipboard->active, text)){
         trace("Clipboard's active text matches new text. Ignoring.\n");
         return;
+    } 
+
+    clip_provider_set_current(clipboard->provider, text);
+
+    if(clip_clipboard_is_enabled(clipboard)){
+        if(text == NULL){
+            debug("New clipboard contents are null (probably a request to clear the clipboard). Removing head.\n");
+            clip_history_remove_head(clipboard->history);
+        } else {
+            clip_history_prepend(clipboard->history, text);
+        }
+    } else {
+        debug("Clipboard is disabled. Not appending to history.\n");
     }
 
     // Set the new value.
     g_free(clipboard->active);
     clipboard->active = g_strdup(text);
-
-    clip_provider_set_current(clipboard->provider, text);
-
-    if(clip_clipboard_is_enabled(clipboard)){
-        clip_history_prepend(clipboard->history, text);
-    } else {
-        debug("Clipboard is disabled. Not appending to history.\n");
-    }
 }
 
 char* clip_clipboard_get_active(Clipboard* clipboard)

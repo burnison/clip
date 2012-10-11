@@ -35,6 +35,7 @@ void clip_history_entry_toggle_lock(ClipboardHistory* history, ClipboardHistoryE
 
 void clip_history_prepend(ClipboardHistory* history, char* text);
 void clip_history_remove(ClipboardHistory* history, ClipboardHistoryEntry* entry);
+void clip_history_remove_head(ClipboardHistory* history);
 
 void clip_history_clear(ClipboardHistory* history);
 

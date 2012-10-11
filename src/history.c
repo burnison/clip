@@ -37,6 +37,7 @@
 #define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE text = ? AND locked IS NOT NULL"
 #define HISTORY_TRUNCATE_HISTORY "DELETE FROM history WHERE locked IS NULL"
 #define HISTORY_REMOVE_OLDEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT min(id) FROM history WHERE locked IS NULL)"
+#define HISTORY_REMOVE_NEWEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT max(id) FROM history WHERE locked IS NULL)"
 
 #define HISTORY_SELECT_HISTORY "SELECT id, text, locked FROM history ORDER BY created, id"
 #define HISTORY_SELECT_COUNT "SELECT count(*) FROM history"
@@ -246,6 +247,14 @@ void clip_history_remove(ClipboardHistory* history, ClipboardHistoryEntry* entry
     clip_history_entry_free(entry);
 }
 
+void clip_history_remove_head(ClipboardHistory* history)
+{
+    int status = sqlite3_exec(history->storage, HISTORY_REMOVE_NEWEST_UNLOCKED, NULL, NULL, NULL);
+    if(SQLITE_OK != status){
+        warn("Cannot remove newest history record (error %d).\n", status);
+    }
+    history->count -= sqlite3_changes(history->storage);
+}
 
 
 

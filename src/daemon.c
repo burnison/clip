@@ -35,16 +35,21 @@ struct daemon {
  */
 static gboolean clip_daemon_poll(Daemon* daemon)
 {
-    char* contents = clip_provider_get_current(daemon->provider);
-    char* active = clip_clipboard_get_active(daemon->clipboard);
-
-    if(g_strcmp0(active, contents)){
-        trace("Provider clipboard contents differ from active clipboard.\n");
-        clip_clipboard_set_active(daemon->clipboard, contents);
+    // Check if the clipboard is available to be queried.
+    if(!clip_provider_current_available(daemon->provider)){
+        return TRUE;
     }
 
-    clip_clipboard_free_active(active);
-    clip_provider_free_current(contents);
+    char* provider_contents = clip_provider_get_current(daemon->provider);
+    char* clipboard_contents = clip_clipboard_get_active(daemon->clipboard);
+
+    if(g_strcmp0(clipboard_contents, provider_contents)){
+        trace("Provider clipboard contents differ from active clipboard.\n");
+        clip_clipboard_set_active(daemon->clipboard, provider_contents);
+    }
+
+    clip_clipboard_free_active(clipboard_contents);
+    clip_provider_free_current(provider_contents);
 
     return TRUE;
 }

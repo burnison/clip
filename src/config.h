@@ -20,7 +20,7 @@
 #define PROGRAM "Clip"
 #define CLIP_HOME ".clip"
 
-#define DAEMON_REFRESH_INTERVAL 250
+#define DAEMON_REFRESH_INTERVAL 500
 
 
 #define HISTORY_MAX_SIZE 500

@@ -360,7 +360,6 @@ static void clip_gui_add_menu_item(ClipboardHistoryEntry* entry)
     g_signal_connect(G_OBJECT(item), "button-release-event", G_CALLBACK(clip_gui_cb_toggle_sticky), entry);
     g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_selected), entry);
 
-
     GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
     gtk_label_set_single_line_mode(label, TRUE);
 
