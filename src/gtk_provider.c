@@ -108,14 +108,19 @@ void clip_provider_set_current(ClipboardProvider* provider, char* text)
         }
         return;
     }
+    
+    char* copy = g_strdup(text); // Freed below.
+    if(PROVIDER_TRIM && text != NULL){
+        copy = g_strstrip(copy);
+    }
 
     provider->waiting = TRUE;
-	clip_provider_set_if_different(provider->clipboard, text);
-	clip_provider_set_if_different(provider->primary, text);
+	clip_provider_set_if_different(provider->clipboard, copy);
+	clip_provider_set_if_different(provider->primary, copy);
     provider->waiting = FALSE;
 
     g_free(provider->current);
-    provider->current = g_strdup(text);
+    provider->current = copy;
 }
 
 void clip_provider_clear(ClipboardProvider* provider)

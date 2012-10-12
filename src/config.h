@@ -20,27 +20,44 @@
 #define PROGRAM "Clip"
 #define CLIP_HOME ".clip"
 
+/**
+ * The number of milliseconds between rescanning the clipboards for changes.
+ */
 #define DAEMON_REFRESH_INTERVAL 500
 
+/* 
+ * Changing this to 0 will disable trimming, however, it will also result in the
+ * current PRIMARY clipboard to become unselected.
+ */
+#define PROVIDER_TRIM 1
 
+/**
+ * The maximum number of elements to retain in the history.
+ */
 #define HISTORY_MAX_SIZE 500
 #define HISTORY_FILE "history.sqlite"
 
-
+/**
+ * The key to press to enter search mode.
+ */
 #define GUI_SEARCH_LEADER '/'
+
+/**
+ * The key sequence used to pop-up the clipboard menu.
+ */
+#define GUI_GLOBAL_KEY "<Ctrl><Alt>P"
+
+/**
+ * The maximum number of characters to display in the pop-up menu.
+ */
+#define GUI_DISPLAY_CHARACTERS 80
+
 #define GUI_SEARCH_MESSAGE "Press / to search"
-
 #define GUI_EMPTY_MESSAGE "--Clipboard Empty--"
-
 #define GUI_CLEAR_MESSAGE "_Clear"
-
 #define GUI_DEBUG_EXIT_MESSAGE "E_xit"
-
 #define GUI_HISTORY_ENABLE_MESSAGE "Enable _History"
 #define GUI_HISTORY_DISABLE_MESSAGE "Disable _History"
-
-#define GUI_GLOBAL_KEY "<Ctrl><Alt>P"
-#define GUI_DISPLAY_CHARACTERS 80
 
 #define LOG_TRACE 1
 #define LOG_DEBUG 1
