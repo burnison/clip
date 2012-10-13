@@ -63,6 +63,10 @@ void clip_clipboard_free(Clipboard* clipboard)
 }
 
 
+/**
+ * Sets the clipboard's current value to a copy of the specified text, or, if text is NULL, the current clipboard value,
+ * along with its associated history entry, are purged.
+ */
 void clip_clipboard_set_active(Clipboard* clipboard, char* text)
 {
     trace("Setting new active clipboard value, \"%.*s...\".\n", 30, text);

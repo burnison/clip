@@ -35,11 +35,6 @@ struct daemon {
  */
 static gboolean clip_daemon_poll(Daemon* daemon)
 {
-    // Check if the clipboard is available to be queried.
-    if(!clip_provider_current_available(daemon->provider)){
-        return TRUE;
-    }
-
     char* provider_contents = clip_provider_get_current(daemon->provider);
     char* clipboard_contents = clip_clipboard_get_active(daemon->clipboard);
 

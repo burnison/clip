@@ -21,14 +21,38 @@
 #include "utils.h"
 
 #include <gtk/gtk.h>
+#include <string.h>
 
 struct provider {
 	GtkClipboard* clipboard;
 	GtkClipboard* primary;
     char* current;
     gboolean ownership_transferred;
-    gboolean waiting;
+    gboolean locked;
 };
+
+
+/**
+ * When requesting content from a GTK clipboard, the actual thread is interleaved, returning control back to the GTK
+ * main loop (via recursion). As such, it's possible a the current wait may be pre-empted by a subsequent wait,
+ * resulting in potentially indeterminate ordering. To prevent the first wait from being pre-empted, this function
+ * serves as a primitive mutex on the provider.
+ * @return TRUE if the lock has been acquired, FALSE otherwise.
+ */
+static gboolean clip_provider_lock(ClipboardProvider* provider)
+{
+    if(provider->locked){
+        return FALSE;
+    }
+    provider->locked = TRUE;
+    return TRUE;
+}
+
+static void clip_provider_unlock(ClipboardProvider* provider)
+{
+    provider->locked = FALSE;
+}
+
 
 
 void clip_provider_cb_owner_changed(GtkClipboard* clipboard, GdkEvent* event, gpointer data)
@@ -46,7 +70,7 @@ ClipboardProvider* clip_provider_new(void)
 	provider->primary = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
     provider->current = NULL;
     provider->ownership_transferred = FALSE;
-    provider->waiting = FALSE;
+    provider->locked = FALSE;
 
     g_signal_connect(G_OBJECT(provider->clipboard), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
     g_signal_connect(G_OBJECT(provider->primary), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
@@ -87,37 +111,44 @@ static void clip_provider_set_if_different(GtkClipboard* clipboard, char* new)
     g_free(old);
 }
 
-/**
- * Sets the specified value, text, to be the current upstream clipboard contents.
- */
-void clip_provider_set_current(ClipboardProvider* provider, char* text)
+static char* clip_provider_prepare_value(ClipboardProvider* provider, char* text)
 {
-    if(provider->waiting){
-        warn("Attempted to set upstream clipboard contents when they are already being set."
-                " This is indicative of a logic bug.\n");
-        return;
-    }
-
     if(provider->ownership_transferred){
         provider->ownership_transferred = FALSE;
         if(text == NULL){
-            debug("Detected an ownership transfer resulting in a clipboard purge. Going to restore old value.\n");
-            char* current = g_strdup(provider->current);
-            clip_provider_set_current(provider, current);
-            g_free(current);
+            debug("Encountered a null after ownership transfer. Dropping and reverting current head.\n");
+            return g_strdup(provider->current);
         }
-        return;
-    }
-    
-    char* copy = g_strdup(text); // Freed below.
-    if(PROVIDER_TRIM && text != NULL){
-        copy = g_strchomp(copy);
     }
 
-    provider->waiting = TRUE;
+    char* copy = g_strdup(text);
+
+    if(copy != NULL && PROVIDER_TRIM){
+        g_strchomp(copy);
+        if(strlen(copy) < 1){
+            debug("Trimmed string is 0 characetrs long. Dropping and reverting current head.\n");
+            g_free(copy);
+            return g_strdup(provider->current);
+        }
+    }
+
+    return copy;
+}
+
+/**
+ * Sets the provider clipboards to a copy of the specified value.
+ */
+void clip_provider_set_current(ClipboardProvider* provider, char* text)
+{
+    char* copy = clip_provider_prepare_value(provider, text);
+
+    if(!clip_provider_lock(provider)){
+        g_free(copy);
+        return;
+    }
 	clip_provider_set_if_different(provider->clipboard, copy);
 	clip_provider_set_if_different(provider->primary, copy);
-    provider->waiting = FALSE;
+    clip_provider_unlock(provider);
 
     g_free(provider->current);
     provider->current = copy;
@@ -125,29 +156,12 @@ void clip_provider_set_current(ClipboardProvider* provider, char* text)
 
 void clip_provider_clear(ClipboardProvider* provider)
 {
-    if(provider->waiting){
-        warn("Attempted to clear current clipboard values when already operating."
-                " This is indicative of a logic bug.\n");
+    if(!clip_provider_lock(provider)){
         return;
     }
-
-    trace("Clearing clipboards.\n");
-
-    provider->waiting = TRUE;
     gtk_clipboard_set_text(provider->primary, "", -1);
     gtk_clipboard_set_text(provider->clipboard, "", -1);
-    provider->waiting = FALSE;
-}
-
-
-/**
- * Identifies if the provider is able to be quried---that is, if the clipboards have properly been synced and
- * have been fully read. This method should be invoked prior to executing get_current, however, no such preconditions
- * will be enforced. This may result in stale data.
- */
-gboolean clip_provider_current_available(ClipboardProvider* provider)
-{
-    return !provider->waiting;
+    clip_provider_unlock(provider);
 }
 
 
@@ -156,41 +170,33 @@ gboolean clip_provider_current_available(ClipboardProvider* provider)
 
 
 /**
- * Remember to free the returned string.
+ * Syncs the two provider clipboards and sets the provider's current value to match that of the synced value.
  */
-static char* clip_provider_get_synced(ClipboardProvider* provider)
+static void clip_provider_sync_clipboards(ClipboardProvider* provider)
 {
-    provider->waiting = TRUE;
+    if(!clip_provider_lock(provider)){
+        return;
+    }
 	char* on_clipboard = gtk_clipboard_wait_for_text(provider->clipboard);
 	char* on_primary = gtk_clipboard_wait_for_text(provider->primary);
-    provider->waiting = FALSE;
-
-	char* selection = NULL;
+    clip_provider_unlock(provider);
 
 	// If primary is set and the two clipboards aren't synced, use primary.
+	char* selection = on_clipboard;
 	if(g_strcmp0(on_clipboard, on_primary)){
 		selection = on_primary;
-	} else {
-		selection = on_clipboard;
 	}
-
-	selection = g_strdup(selection);
+    clip_provider_set_current(provider, selection);
 	g_free(on_clipboard);
 	g_free(on_primary);
-
-    return selection;
 }
 
 /**
- * Gets the current value of the system clipboard.
+ * Returns a copy of the current system clipboard.
  */
 char* clip_provider_get_current(ClipboardProvider* provider)
 {
-    if(!provider->waiting){
-        char* synced = clip_provider_get_synced(provider);
-        clip_provider_set_current(provider, synced);
-        g_free(synced);
-    }
+    clip_provider_sync_clipboards(provider);
 
 	return g_strdup(provider->current);
 }

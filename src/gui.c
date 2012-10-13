@@ -464,6 +464,22 @@ void clip_gui_destroy(void)
         search_term = NULL;
     }
 
+    g_object_unref(menu_item_search);
+    gtk_widget_destroy(menu_item_search);
+    menu_item_search = NULL;
+
+    g_object_unref(menu_item_history);
+    gtk_widget_destroy(menu_item_history);
+    menu_item_history = NULL;
+
+    g_object_unref(menu_item_empty);
+    gtk_widget_destroy(menu_item_empty);
+    menu_item_empty = NULL;
+
+    g_object_unref(menu_item_clear);
+    gtk_widget_destroy(menu_item_clear);
+    menu_item_clear = NULL;
+
     gtk_widget_destroy(menu);
     menu = NULL;
 }
