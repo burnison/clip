@@ -111,7 +111,7 @@ void clip_provider_set_current(ClipboardProvider* provider, char* text)
     
     char* copy = g_strdup(text); // Freed below.
     if(PROVIDER_TRIM && text != NULL){
-        copy = g_strstrip(copy);
+        copy = g_strchomp(copy);
     }
 
     provider->waiting = TRUE;
