@@ -58,7 +58,7 @@ static void clip_provider_unlock(ClipboardProvider* provider)
 void clip_provider_cb_owner_changed(GtkClipboard* clipboard, GdkEvent* event, gpointer data)
 {
 	if(((GdkEventOwnerChange*)event)->reason != GDK_OWNER_CHANGE_NEW_OWNER) {
-        debug("Clipboard owner has been destroyed. Going to ignore next null.\n");
+        debug("Clipboard owner has been destroyed. Going to ignore next value if null.\n");
         ((ClipboardProvider*)data)->ownership_transferred = TRUE;
     }
 }
@@ -181,10 +181,12 @@ static void clip_provider_sync_clipboards(ClipboardProvider* provider)
 	char* on_primary = gtk_clipboard_wait_for_text(provider->primary);
     clip_provider_unlock(provider);
 
-	// If primary is set and the two clipboards aren't synced, use primary.
 	char* selection = on_clipboard;
-	if(g_strcmp0(on_clipboard, on_primary)){
-		selection = on_primary;
+
+    // If primary differs from the clipboard, us the primary buffer.
+    // However, if the primary is null or empty, use clipboard.
+	if(on_primary != NULL && strlen(on_primary) > 0 && g_strcmp0(on_clipboard, on_primary)){
+        selection = on_primary;
 	}
     clip_provider_set_current(provider, selection);
 	g_free(on_clipboard);
