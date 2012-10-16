@@ -175,7 +175,8 @@ static void clip_gui_search_select_match(void)
             }
 
             // Skip the first nth records that match.
-            if(active_position++ == search_pos){
+            active_position++;
+            if(active_position > search_pos){
                 gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), GTK_WIDGET(next->data));
                 break;
             }

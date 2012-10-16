@@ -32,4 +32,4 @@
 const char* clip_config_get_home_dir(void);
 const char* clip_config_get_storage_file(void);
 
-void clip_config_destroy();
+void clip_config_destroy(void);

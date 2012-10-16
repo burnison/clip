@@ -72,8 +72,9 @@ ClipboardProvider* clip_provider_new(void)
     provider->ownership_transferred = FALSE;
     provider->locked = FALSE;
 
-    g_signal_connect(G_OBJECT(provider->clipboard), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
     g_signal_connect(G_OBJECT(provider->primary), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
+    g_signal_connect(G_OBJECT(provider->clipboard), "owner-change",
+            G_CALLBACK(clip_provider_cb_owner_changed), provider);
 
 	return provider;
 }

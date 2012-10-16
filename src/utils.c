@@ -40,7 +40,7 @@ const char* clip_config_get_storage_file(void)
     return storage;
 }
 
-void clip_config_destroy()
+void clip_config_destroy(void)
 {
     g_free(home);
     home = NULL;
