@@ -63,7 +63,8 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_clip_OBJECTS = daemon.$(OBJEXT) gtk_provider.$(OBJEXT) \
 	clipboard.$(OBJEXT) history.$(OBJEXT) gui.$(OBJEXT) \
-	keybinder.$(OBJEXT) utils.$(OBJEXT) main.$(OBJEXT)
+	gui_editor.$(OBJEXT) keybinder.$(OBJEXT) utils.$(OBJEXT) \
+	main.$(OBJEXT)
 clip_OBJECTS = $(am_clip_OBJECTS)
 clip_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
@@ -190,7 +191,7 @@ AM_CFLAGS = -Wall -O2 -std=c99 $(GTK_CFLAGS) ${GLIB_CFLAGS} \
 LDADD = $(GTK_LIBS) ${GLIB_LIBS} ${X11_LIBS} ${SQLITE3_LIBS}
 clip_SOURCES = daemon.c gtk_provider.c \
 			   	clipboard.c history.c \
-				gui.c keybinder.c \
+				gui.c gui_editor.c keybinder.c \
 				utils.c main.c
 
 all: all-am
@@ -281,6 +282,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gtk_provider.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gui.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gui_editor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/history.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keybinder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@

@@ -18,6 +18,8 @@
  */
 
 #include "gui.h"
+#include "gui_editor.h"
+
 #include "config.h"
 #include "keybinder.h"
 #include "utils.h"
@@ -33,6 +35,7 @@ static GtkWidget* menu_item_search;
 static GtkWidget* menu_item_clear;
 static GtkWidget* menu_item_history;
 static GtkWidget* menu_item_empty;
+static GtkWidget* menu_item_edit;
 
 static GList* history;
 
@@ -300,7 +303,22 @@ static void clip_gui_cb_remove_menu_item(GtkWidget* item, gpointer data)
     gtk_container_remove(GTK_CONTAINER(menu), item);
 }
 
+static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
+{
+    trace("Edit current value.\n");
 
+    char* current = clip_clipboard_get_active(clipboard);
+    char* edited = clip_gui_editor_edit_text(current);
+
+    if(edited != NULL){
+        clip_clipboard_set_active(clipboard, edited);
+    } else {
+        debug("Edited text is unchanged. Ignoring edit request.\n");
+    }
+
+    clip_gui_editor_free_text(edited);
+    clip_clipboard_free_active(current);
+}
 
 
 
@@ -392,6 +410,7 @@ static void clip_gui_sync_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_history);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_clear);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_edit);
 
 #ifdef DEBUG
     GtkWidget* menu_item_exit = gtk_menu_item_new_with_mnemonic(GUI_DEBUG_EXIT_MESSAGE);
@@ -399,27 +418,6 @@ static void clip_gui_sync_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_exit);
 #endif
 }
-
-
-static void clip_gui_setup_menu(void)
-{
-    menu = gtk_menu_new();
-    g_signal_connect(G_OBJECT(menu), "key-press-event", G_CALLBACK(clip_gui_cb_search), NULL);
-
-    menu_item_search = g_object_ref(gtk_menu_item_new_with_label(GUI_SEARCH_MESSAGE));
-    gtk_widget_set_sensitive(menu_item_search, FALSE);
-
-    menu_item_clear = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_CLEAR_MESSAGE));
-    g_signal_connect(G_OBJECT(menu_item_clear), "activate", G_CALLBACK(clip_gui_cb_clear_clipboard), NULL);
-
-    menu_item_history = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_HISTORY_DISABLE_MESSAGE));
-    g_signal_connect(G_OBJECT(menu_item_history), "activate", G_CALLBACK(clip_gui_cb_toggle_clipboard), NULL);
-
-    menu_item_empty = g_object_ref(gtk_menu_item_new_with_label(GUI_EMPTY_MESSAGE));
-    clip_gui_set_markedup_label(GTK_BIN(menu_item_empty), "<i>%s</i>", GUI_EMPTY_MESSAGE);
-    gtk_widget_set_sensitive(menu_item_empty, FALSE);
-}
-
 
 
 void clip_gui_show(void)
@@ -443,8 +441,26 @@ void clip_gui_init(Clipboard* _clipboard)
     trace("Creating new GUI menu.\n");
 
     clipboard = _clipboard;
+    history = NULL;
 
-    clip_gui_setup_menu();
+    menu = gtk_menu_new();
+    g_signal_connect(G_OBJECT(menu), "key-press-event", G_CALLBACK(clip_gui_cb_search), NULL);
+
+    menu_item_search = g_object_ref(gtk_menu_item_new_with_label(GUI_SEARCH_MESSAGE));
+    gtk_widget_set_sensitive(menu_item_search, FALSE);
+
+    menu_item_clear = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_CLEAR_MESSAGE));
+    g_signal_connect(G_OBJECT(menu_item_clear), "activate", G_CALLBACK(clip_gui_cb_clear_clipboard), NULL);
+
+    menu_item_history = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_HISTORY_DISABLE_MESSAGE));
+    g_signal_connect(G_OBJECT(menu_item_history), "activate", G_CALLBACK(clip_gui_cb_toggle_clipboard), NULL);
+
+    menu_item_empty = g_object_ref(gtk_menu_item_new_with_label(GUI_EMPTY_MESSAGE));
+    clip_gui_set_markedup_label(GTK_BIN(menu_item_empty), "<i>%s</i>", GUI_EMPTY_MESSAGE);
+    gtk_widget_set_sensitive(menu_item_empty, FALSE);
+
+    menu_item_edit = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_EDIT_MESSAGE));
+    g_signal_connect(G_OBJECT(menu_item_edit), "activate", G_CALLBACK(clip_gui_cb_edit), NULL);
 
     keybinder_init();
     keybinder_bind(GUI_GLOBAL_KEY, clip_gui_cb_hotkey_handler, NULL);
