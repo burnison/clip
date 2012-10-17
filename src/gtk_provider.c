@@ -113,7 +113,6 @@ static gboolean clip_provider_is_provider_ready()
     gdk_window_get_device_position(root_window, pointer, NULL, NULL, &modifiers);
 
     if(modifiers & (GDK_BUTTON1_MASK | GDK_SHIFT_MASK)){
-        debug("Left mouse button or shift mask is currently enabled. Ignoring clipboard contents.\n");
         return FALSE;
     }
     return TRUE;
