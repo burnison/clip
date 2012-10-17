@@ -99,6 +99,27 @@ void clip_provider_free(ClipboardProvider* provider)
 
 
 /**
+ * Determines if the clipboards are in a state wherein content can be used. For example, if the right mouse button is
+ * currently pressed, we can assume that the primary clipboard is not fully complete, and thus, the content is not yet
+ * ready to be consumed.
+ */
+static gboolean clip_provider_is_provider_ready()
+{
+    GdkWindow* root_window = gdk_get_default_root_window();
+    GdkDeviceManager* device_manager = gdk_display_get_device_manager(gdk_display_get_default());
+    GdkDevice* pointer = gdk_device_manager_get_client_pointer(device_manager);
+    GdkModifierType modifiers = {0};
+
+    gdk_window_get_device_position(root_window, pointer, NULL, NULL, &modifiers);
+
+    if(modifiers & (GDK_BUTTON1_MASK | GDK_SHIFT_MASK)){
+        debug("Left mouse button or shift mask is currently enabled. Ignoring clipboard contents.\n");
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/**
  * Updates the clipboard only if the values are textually different. If the active X11 selection is changed (even with
  * the same string), the current selection is unhilighted. As such, only swap the two values if they are actually
  * different, textually.
@@ -141,6 +162,10 @@ static char* clip_provider_prepare_value(ClipboardProvider* provider, char* text
  */
 void clip_provider_set_current(ClipboardProvider* provider, char* text)
 {
+    if(!clip_provider_is_provider_ready()){
+        return;
+    }
+
     char* copy = clip_provider_prepare_value(provider, text);
 
     if(!clip_provider_lock(provider)){
