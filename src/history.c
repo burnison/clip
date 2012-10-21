@@ -34,7 +34,7 @@
                                ")"
 #define HISTORY_INSERT_HISTORY "INSERT OR REPLACE INTO history(text, created, locked) VALUES(?1, current_timestamp, (SELECT locked FROM history WHERE text = ?1))"
 
-#define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE text = ? AND locked IS NOT NULL"
+#define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE text = ? AND locked IS NULL"
 #define HISTORY_TRUNCATE_HISTORY "DELETE FROM history WHERE locked IS NULL"
 #define HISTORY_REMOVE_OLDEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT min(id) FROM history WHERE locked IS NULL)"
 #define HISTORY_REMOVE_NEWEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT max(id) FROM history WHERE locked IS NULL)"
@@ -239,14 +239,17 @@ void clip_history_prepend(ClipboardHistory* history, char* text)
 }
 
 /**
- * Removes the entry from the list and frees it.
+ * Removes the entry from the history. This function does not free the entry, just removes it from the backing store.
  */
 void clip_history_remove(ClipboardHistory* history, ClipboardHistoryEntry* entry)
 {
+    debug("Removing clipboard entry, %d.\n", entry->id);
     clip_history_storage_execute(HISTORY_DELETE_HISTORY, history, entry->text);
-    clip_history_entry_free(entry);
 }
 
+/**
+ * Removes the head entry from the history.
+ */
 void clip_history_remove_head(ClipboardHistory* history)
 {
     int status = sqlite3_exec(history->storage, HISTORY_REMOVE_NEWEST_UNLOCKED, NULL, NULL, NULL);

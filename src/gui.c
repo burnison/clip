@@ -39,6 +39,9 @@ static GtkWidget* menu_item_edit;
 
 static GList* history;
 
+// A pointer to the currently selected element.
+static ClipboardHistoryEntry* selected_entry;
+
 static GString* search_term;
 static int search_pos;
 
@@ -51,6 +54,23 @@ static void clip_gui_update_menu(void);
 static void clip_gui_set_normal_label(GtkBin* item, char* text);
 static void clip_gui_set_markedup_label(GtkBin* item, char* format, char* text);
 
+
+
+static void clip_gui_remove_selected(void)
+{
+    if(selected_entry == NULL){
+        return;
+    } else if(clip_history_entry_get_locked(selected_entry)){
+        debug("Refusing to delete locked entry.\n");
+        return;
+    }
+
+    clip_clipboard_remove(clipboard, selected_entry);
+    selected_entry = NULL;
+
+    GtkWidget* selected = gtk_menu_shell_get_selected_item(GTK_MENU_SHELL(menu));
+    gtk_container_remove(GTK_CONTAINER(menu), selected);
+}
 
 /**
  * Identifies if the menu is currently in search mode.
@@ -198,7 +218,7 @@ static void clip_gui_search_select_match(void)
     g_list_free(children);
 }
 
-static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer data)
+static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointer data)
 {
     guint keyval = ((GdkEventKey*)event)->keyval;
     switch(keyval){
@@ -214,7 +234,7 @@ static gboolean clip_gui_cb_search(GtkWidget* widget, GdkEvent* event, gpointer 
             break;
 
 		case GDK_KEY_Delete:
-			debug("Delete hook not yet implemented.\n");
+            clip_gui_remove_selected();
 			break;
 
         case GDK_KEY_BackSpace:
@@ -259,14 +279,21 @@ static gboolean clip_gui_cb_toggle_sticky(GtkWidget* widget, GdkEvent* event, gp
 /**
  * Invoked when a historical menu item has been selected.
  */
-static gboolean clip_gui_cb_history_selected(GtkMenuItem* widget, gpointer data)
+static gboolean clip_gui_cb_history_activated(GtkMenuItem* widget, gpointer data)
 {
-    trace("History item selected.\n");
+    trace("History item activated.\n");
 
     char* text = clip_history_entry_get_text(data);
     clip_clipboard_set_active(clipboard, text);
     clip_history_entry_free_text(text);
 
+    return FALSE;
+}
+
+
+static gboolean clip_gui_cb_history_selected(GtkMenuItem* widget, gpointer data)
+{
+    selected_entry = data;
     return FALSE;
 }
 
@@ -319,7 +346,6 @@ static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
     clip_gui_editor_free_text(edited);
     clip_clipboard_free_active(current);
 }
-
 
 
 
@@ -377,7 +403,8 @@ static void clip_gui_add_menu_item(ClipboardHistoryEntry* entry)
     clip_gui_set_display_text(item, entry);
 
     g_signal_connect(G_OBJECT(item), "button-release-event", G_CALLBACK(clip_gui_cb_toggle_sticky), entry);
-    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_selected), entry);
+    g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_activated), entry);
+    g_signal_connect(G_OBJECT(item), "select", G_CALLBACK(clip_gui_cb_history_selected), entry);
 
     GtkLabel* label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(item)));
     gtk_label_set_single_line_mode(label, TRUE);
@@ -388,6 +415,8 @@ static void clip_gui_add_menu_item(ClipboardHistoryEntry* entry)
 
 static void clip_gui_sync_menu(void)
 {
+    selected_entry = NULL;
+
     // Remove everything. Inefficient, but good enouh for now.
     gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)clip_gui_cb_remove_menu_item, NULL);
 
@@ -442,9 +471,10 @@ void clip_gui_init(Clipboard* _clipboard)
 
     clipboard = _clipboard;
     history = NULL;
+    selected_entry = NULL;
 
     menu = gtk_menu_new();
-    g_signal_connect(G_OBJECT(menu), "key-press-event", G_CALLBACK(clip_gui_cb_search), NULL);
+    g_signal_connect(G_OBJECT(menu), "key-press-event", G_CALLBACK(clip_gui_cb_keypress), NULL);
 
     menu_item_search = g_object_ref(gtk_menu_item_new_with_label(GUI_SEARCH_MESSAGE));
     gtk_widget_set_sensitive(menu_item_search, FALSE);
