@@ -50,34 +50,6 @@ struct history {;
     int count;
 };
 
-struct entry {
-    int id;
-    char* text;
-    gboolean locked;
-};
-
-/**
- * Creates a new history entry using copies of the provided texts.
- */
-static ClipboardHistoryEntry* clip_history_entry_new(int id, char* text, char* locked)
-{
-    ClipboardHistoryEntry* entry = g_malloc(sizeof(ClipboardHistoryEntry));
-    entry->id = id;
-    entry->text = g_strdup(text);
-    entry->locked = (locked == NULL) ? FALSE : TRUE;
-    return entry;
-}
-
-static void clip_history_entry_free(ClipboardHistoryEntry* entry)
-{
-    g_free(entry->text);
-    entry->text = NULL;
-
-    g_free(entry);
-}
-
-
-
 
 static int clip_history_callback_count(void* data, int row, char** values, char** names)
 {
@@ -184,39 +156,15 @@ finalize:
 
 
 
-char* clip_history_entry_get_text(ClipboardHistoryEntry* entry)
-{
-    return g_strdup(entry->text);
-}
-
-void clip_history_entry_free_text(char* text)
-{
-    g_free(text);
-}
-
-
-gboolean clip_history_entry_get_locked(ClipboardHistoryEntry* entry)
-{
-    return entry->locked;
-}
-
-
-
-void clip_history_entry_toggle_lock(ClipboardHistory* history, ClipboardHistoryEntry* entry)
-{
-    trace("Toggling entry lock.\n");
-    clip_history_storage_execute(HISTORY_UPDATE_TOGGLE_LOCK, history, entry->text);
-    entry->locked = !entry->locked;
-}
-
-
 /**
  * Creates and returns a new history entry. Invokers are responsible for freeing it.
  */
-void clip_history_prepend(ClipboardHistory* history, char* text)
+void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 {
     trace("Prepending/promoting text to history.\n");
-    clip_history_storage_execute(HISTORY_INSERT_HISTORY, history, text);
+    char* key = clip_clipboard_entry_get_text(entry);
+
+    clip_history_storage_execute(HISTORY_INSERT_HISTORY, history, key);
 
     /*
      * Because this statement uses a create/replace, the number of affected rows
@@ -241,10 +189,11 @@ void clip_history_prepend(ClipboardHistory* history, char* text)
 /**
  * Removes the entry from the history. This function does not free the entry, just removes it from the backing store.
  */
-void clip_history_remove(ClipboardHistory* history, ClipboardHistoryEntry* entry)
+void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    debug("Removing clipboard entry, %d.\n", entry->id);
-    clip_history_storage_execute(HISTORY_DELETE_HISTORY, history, entry->text);
+    trace("Removing clipboard entry.\n");
+    char* key = clip_clipboard_entry_get_text(entry);
+    clip_history_storage_execute(HISTORY_DELETE_HISTORY, history, key);
 }
 
 /**
@@ -257,6 +206,13 @@ void clip_history_remove_head(ClipboardHistory* history)
         warn("Cannot remove newest history record (error %d).\n", status);
     }
     history->count -= sqlite3_changes(history->storage);
+}
+
+void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry)
+{
+    trace("Toggling entry lock.\n");
+    char* key = clip_clipboard_entry_get_text(entry);
+    clip_history_storage_execute(HISTORY_UPDATE_TOGGLE_LOCK, history, key);
 }
 
 
@@ -275,8 +231,11 @@ void clip_history_clear(ClipboardHistory* history)
 
 static int clip_history_callback_selection(void* data, int row, char** values, char** names)
 {
-    ClipboardHistoryEntry* entry = clip_history_entry_new(atoi(values[0]), values[1], values[2]);
+    // int id = atoi(values[0]);
+    char* text = values[1];
+    char* locked = values[2];
 
+    ClipboardEntry* entry = clip_clipboard_entry_new(text, locked != NULL);
     *((GList**)data) = g_list_prepend(*((GList**)data), entry);
 
     return 0;
@@ -300,5 +259,5 @@ GList* clip_history_get_list(ClipboardHistory* history)
 
 void clip_history_free_list(GList* list)
 {
-    g_list_free_full(list, (GDestroyNotify)clip_history_entry_free);
+    g_list_free_full(list, (GDestroyNotify)clip_clipboard_entry_free);
 }

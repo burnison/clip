@@ -5,8 +5,8 @@ LDADD = $(GTK_LIBS) ${GLIB_LIBS} ${X11_LIBS} ${SQLITE3_LIBS}
 
 bin_PROGRAMS = clip
 
-clip_SOURCES = 	daemon.c gtk_provider.c \
-			   	clipboard.c history.c \
+clip_SOURCES = 	daemon.c provider.c \
+			   	clipboard_entry.c clipboard.c history.c \
 				gui.c gui_editor.c keybinder.c \
 				utils.c main.c
 

@@ -17,21 +17,15 @@
  * along with Clip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "clipboard_entry.h"
-
 #include <glib.h>
 
-typedef struct history ClipboardHistory;
+typedef struct clipboard_entry ClipboardEntry;
 
-ClipboardHistory* clip_history_new(void);
-void clip_history_free(ClipboardHistory* history);
+ClipboardEntry* clip_clipboard_entry_new(char* text, gboolean locked);
+ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry);
+void clip_clipboard_entry_free(ClipboardEntry* entry);
 
-void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry);
-void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry);
-void clip_history_remove_head(ClipboardHistory* history);
-void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry);
+char* clip_clipboard_entry_get_text(ClipboardEntry* entry);
 
-void clip_history_clear(ClipboardHistory* history);
-
-GList* clip_history_get_list(ClipboardHistory* history);
-void clip_history_free_list(GList* list);
+gboolean clip_clipboard_entry_get_locked(ClipboardEntry* entry);
+void clip_clipboard_entry_set_locked(ClipboardEntry* entry, gboolean locked);

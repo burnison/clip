@@ -32,27 +32,10 @@ struct provider {
 };
 
 
-/**
- * When requesting content from a GTK clipboard, the actual thread is interleaved, returning control back to the GTK
- * main loop (via recursion). As such, it's possible a the current wait may be pre-empted by a subsequent wait,
- * resulting in potentially indeterminate ordering. To prevent the first wait from being pre-empted, this function
- * serves as a primitive mutex on the provider.
- * @return TRUE if the lock has been acquired, FALSE otherwise.
- */
-static gboolean clip_provider_lock(ClipboardProvider* provider)
-{
-    if(provider->locked){
-        return FALSE;
-    }
-    provider->locked = TRUE;
-    return TRUE;
-}
-
 static void clip_provider_unlock(ClipboardProvider* provider)
 {
     provider->locked = FALSE;
 }
-
 
 
 void clip_provider_cb_owner_changed(GtkClipboard* clipboard, GdkEvent* event, gpointer data)
@@ -97,6 +80,23 @@ void clip_provider_free(ClipboardProvider* provider)
 	g_free(provider);
 }
 
+
+
+/**
+ * When requesting content from a GTK clipboard, the actual thread is interleaved, returning control back to the GTK
+ * main loop (via recursion). As such, it's possible a the current wait may be pre-empted by a subsequent wait,
+ * resulting in potentially indeterminate ordering. To prevent the first wait from being pre-empted, this function
+ * serves as a primitive mutex on the provider.
+ * @return TRUE if the lock has been acquired, FALSE otherwise.
+ */
+static gboolean clip_provider_lock(ClipboardProvider* provider)
+{
+    if(provider->locked){
+        return FALSE;
+    }
+    provider->locked = TRUE;
+    return TRUE;
+}
 
 /**
  * Determines if the clipboards are in a state wherein content can be used. For example, if the right mouse button is
@@ -166,7 +166,6 @@ void clip_provider_set_current(ClipboardProvider* provider, char* text)
     }
 
     char* copy = clip_provider_prepare_value(provider, text);
-
     if(!clip_provider_lock(provider)){
         g_free(copy);
         return;

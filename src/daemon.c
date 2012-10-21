@@ -35,16 +35,17 @@ struct daemon {
  */
 static gboolean clip_daemon_poll(Daemon* daemon)
 {
+    ClipboardEntry* clipboard_entry = clip_clipboard_get(daemon->clipboard);
+    char* clipboard_contents = clipboard_entry == NULL ? NULL : clip_clipboard_entry_get_text(clipboard_entry);
     char* provider_contents = clip_provider_get_current(daemon->provider);
-    char* clipboard_contents = clip_clipboard_get_active(daemon->clipboard);
 
     if(g_strcmp0(clipboard_contents, provider_contents)){
         trace("Provider clipboard contents differ from active clipboard.\n");
-        clip_clipboard_set_active(daemon->clipboard, provider_contents);
+        clip_clipboard_set(daemon->clipboard, provider_contents);
     }
 
-    clip_clipboard_free_active(clipboard_contents);
     clip_provider_free_current(provider_contents);
+    clip_clipboard_entry_free(clipboard_entry);
 
     return TRUE;
 }

@@ -40,7 +40,7 @@ static GtkWidget* menu_item_edit;
 static GList* history;
 
 // A pointer to the currently selected element.
-static ClipboardHistoryEntry* selected_entry;
+static ClipboardEntry* selected_entry;
 
 static GString* search_term;
 static int search_pos;
@@ -49,7 +49,7 @@ static int search_pos;
 /**
  * Usedby some callbacks.
  */
-static void clip_gui_set_display_text(GtkWidget* menu_item, ClipboardHistoryEntry* entry);
+static void clip_gui_set_display_text(GtkWidget* menu_item, ClipboardEntry* entry);
 static void clip_gui_update_menu(void);
 static void clip_gui_set_normal_label(GtkBin* item, char* text);
 static void clip_gui_set_markedup_label(GtkBin* item, char* format, char* text);
@@ -60,7 +60,7 @@ static void clip_gui_remove_selected(void)
 {
     if(selected_entry == NULL){
         return;
-    } else if(clip_history_entry_get_locked(selected_entry)){
+    } else if(clip_clipboard_entry_get_locked(selected_entry)){
         debug("Refusing to delete locked entry.\n");
         return;
     }
@@ -263,7 +263,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
 
 
 
-static gboolean clip_gui_cb_toggle_sticky(GtkWidget* widget, GdkEvent* event, gpointer data)
+static gboolean clip_gui_cb_toggle_lock(GtkWidget* widget, GdkEvent* event, gpointer data)
 {
     // Only handle right button press.
     if(((GdkEventButton*)event)->button != 3) {
@@ -283,9 +283,8 @@ static gboolean clip_gui_cb_history_activated(GtkMenuItem* widget, gpointer data
 {
     trace("History item activated.\n");
 
-    char* text = clip_history_entry_get_text(data);
-    clip_clipboard_set_active(clipboard, text);
-    clip_history_entry_free_text(text);
+    char* text = clip_clipboard_entry_get_text(data);
+    clip_clipboard_set(clipboard, text);
 
     return FALSE;
 }
@@ -309,7 +308,7 @@ static gboolean clip_gui_cb_clear_clipboard(GtkMenuItem* item, gpointer data)
 static gboolean clip_gui_cb_toggle_clipboard(GtkMenuItem* item, gpointer data)
 {
     trace("Toggle clipboard history.\n");
-    clip_clipboard_toggle(clipboard);
+    clip_clipboard_toggle_history(clipboard);
     return FALSE;
 }
 
@@ -334,17 +333,18 @@ static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
 {
     trace("Edit current value.\n");
 
-    char* current = clip_clipboard_get_active(clipboard);
+    ClipboardEntry* current_entry = clip_clipboard_get(clipboard);
+    char* current = clip_clipboard_entry_get_text(current_entry);
     char* edited = clip_gui_editor_edit_text(current);
 
     if(edited != NULL){
-        clip_clipboard_set_active(clipboard, edited);
+        clip_clipboard_set(clipboard, edited);
     } else {
         debug("Edited text is unchanged. Ignoring edit request.\n");
     }
 
     clip_gui_editor_free_text(edited);
-    clip_clipboard_free_active(current);
+    clip_clipboard_entry_free(current_entry);
 }
 
 
@@ -373,7 +373,7 @@ static void clip_gui_update_menu(void)
         : GUI_SEARCH_MESSAGE;
     clip_gui_set_markedup_label(GTK_BIN(menu_item_search), "<i><b>%s</b></i>", search_text);
 
-    char* history_text = clip_clipboard_is_enabled(clipboard)
+    char* history_text = clip_clipboard_is_history_enabled(clipboard)
         ? GUI_HISTORY_DISABLE_MESSAGE
         : GUI_HISTORY_ENABLE_MESSAGE;
     clip_gui_set_normal_label(GTK_BIN(menu_item_history), history_text);
@@ -382,27 +382,26 @@ static void clip_gui_update_menu(void)
 
 
 
-static void clip_gui_set_display_text(GtkWidget* menu_item, ClipboardHistoryEntry* entry)
+static void clip_gui_set_display_text(GtkWidget* menu_item, ClipboardEntry* entry)
 {
-    char* entry_text = clip_history_entry_get_text(entry);
+    char* entry_text = clip_clipboard_entry_get_text(entry);
     char* shortened = g_strndup(entry_text, GUI_DISPLAY_CHARACTERS);
 
-    if(clip_history_entry_get_locked(entry)){
+    if(clip_clipboard_entry_get_locked(entry)){
         clip_gui_set_markedup_label(GTK_BIN(menu_item), "<b>%s</b>", shortened);
     } else {
         clip_gui_set_normal_label(GTK_BIN(menu_item), shortened);
     }
 
     g_free(shortened);
-    clip_history_entry_free_text(entry_text);
 }
 
-static void clip_gui_add_menu_item(ClipboardHistoryEntry* entry)
+static void clip_gui_add_menu_item(ClipboardEntry* entry)
 {
     GtkWidget* item = gtk_menu_item_new_with_label(NULL);
     clip_gui_set_display_text(item, entry);
 
-    g_signal_connect(G_OBJECT(item), "button-release-event", G_CALLBACK(clip_gui_cb_toggle_sticky), entry);
+    g_signal_connect(G_OBJECT(item), "button-release-event", G_CALLBACK(clip_gui_cb_toggle_lock), entry);
     g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_activated), entry);
     g_signal_connect(G_OBJECT(item), "select", G_CALLBACK(clip_gui_cb_history_selected), entry);
 
@@ -449,10 +448,10 @@ static void clip_gui_sync_menu(void)
 }
 
 
+
 void clip_gui_show(void)
 {
     trace("Showing history menu.\n");
-
     if(menu == NULL){
         warn("GUI has not yet been initialized!\n");
         return;
