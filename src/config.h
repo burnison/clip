@@ -50,7 +50,7 @@
 /**
  * The maximum number of characters to display in the pop-up menu.
  */
-#define GUI_DISPLAY_CHARACTERS 80
+#define GUI_DISPLAY_CHARACTERS 120
 
 #define GUI_SEARCH_MESSAGE "Press / to search"
 #define GUI_EMPTY_MESSAGE "--Clipboard Empty--"

@@ -7,6 +7,6 @@ bin_PROGRAMS = clip
 
 clip_SOURCES = 	daemon.c provider.c \
 			   	clipboard_entry.c clipboard.c history.c \
-				gui.c gui_editor.c keybinder.c \
+				gui.c gui_editor.c gui_search.c keybinder.c \
 				utils.c main.c
 
