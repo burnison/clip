@@ -207,10 +207,14 @@ static void clip_provider_sync_clipboards(ClipboardProvider* provider)
 
 	char* selection = on_clipboard;
 
-    // If primary differs from the clipboard, us the primary buffer.
-    // However, if the primary is null or empty, use clipboard.
-	if(on_primary != NULL && strlen(on_primary) > 0 && g_strcmp0(on_clipboard, on_primary)){
-        selection = on_primary;
+    // Check if the primary even has content.
+	if(on_primary != NULL && strlen(on_primary) > 0){
+        // Check if primary is different from clipboard. If it is, then make sure that it's the primary that changed and
+        // not clipboard by comparing clipboard to "current".
+        if(g_strcmp0(on_primary, on_clipboard) && !g_strcmp0(on_clipboard, provider->current)){
+            // Primary definitely changed. Use it.
+            selection = on_primary;
+        }
 	}
     clip_provider_set_current(provider, selection);
 	g_free(on_clipboard);
