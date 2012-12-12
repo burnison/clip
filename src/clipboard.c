@@ -83,7 +83,7 @@ void clip_clipboard_set(Clipboard* clipboard, char* text)
 
     // Set the new value.
     clip_clipboard_entry_free(clipboard->current);
-    clipboard->current = clip_clipboard_entry_new(text, FALSE);
+    clipboard->current = clip_clipboard_entry_new(text, FALSE, 0);
 
     if(clip_clipboard_is_history_enabled(clipboard)){
         if(text == NULL){

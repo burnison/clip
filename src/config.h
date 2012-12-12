@@ -34,7 +34,7 @@
 /**
  * The maximum number of elements to retain in the history.
  */
-#define HISTORY_MAX_SIZE 500
+#define HISTORY_MAX_SIZE 150
 #define HISTORY_FILE "history.sqlite"
 
 /**

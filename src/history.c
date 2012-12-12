@@ -30,16 +30,22 @@
                                "    id INTEGER PRIMARY KEY,"\
                                "    created TIMESTAMP NOT NULL DEFAULT current_timestamp,"\
                                "    text TEXT NOT NULL UNIQUE,"\
+                               "    usage_count BIGINT NOT NULL DEFAULT 0,"\
                                "    locked TIMESTAMP"\
                                ")"
-#define HISTORY_INSERT_HISTORY "INSERT OR REPLACE INTO history(text, created, locked) VALUES(?1, current_timestamp, (SELECT locked FROM history WHERE text = ?1))"
+// The usage count will be 0 when null (i.e. no value).
+#define HISTORY_INSERT_HISTORY "INSERT OR REPLACE INTO history(text, created, locked, usage_count) VALUES(?1, current_timestamp, "\
+        "(SELECT locked FROM history WHERE text = ?1), "\
+        "(SELECT usage_count + 1 FROM history WHERE text = ?1))"
 
 #define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE text = ? AND locked IS NULL"
 #define HISTORY_TRUNCATE_HISTORY "DELETE FROM history WHERE locked IS NULL"
-#define HISTORY_REMOVE_OLDEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT min(id) FROM history WHERE locked IS NULL)"
 #define HISTORY_REMOVE_NEWEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT max(id) FROM history WHERE locked IS NULL)"
 
-#define HISTORY_SELECT_HISTORY "SELECT id, text, locked FROM history ORDER BY created, id"
+// Use a LRU+LFU eviction policy.
+#define HISTORY_EVICT_SINGLE "DELETE FROM history WHERE id = (SELECT id FROM history WHERE locked IS NULL ORDER BY usage_count, id LIMIT 1)"
+
+#define HISTORY_SELECT_HISTORY "SELECT id, text, locked, usage_count FROM history ORDER BY created, id"
 #define HISTORY_SELECT_COUNT "SELECT count(*) FROM history"
 
 #define HISTORY_UPDATE_TOGGLE_LOCK "UPDATE history SET locked =   CASE WHEN locked IS NULL THEN current_timestamp     ELSE null END WHERE text = ?"
@@ -154,6 +160,14 @@ finalize:
 }
 
 
+static void clip_history_evict(ClipboardHistory* history)
+{
+    int status = sqlite3_exec(history->storage, HISTORY_EVICT_SINGLE, NULL, NULL, NULL);
+    if(SQLITE_OK != status){
+        warn("Cannot remove oldest history record (error %d).\n", status);
+    }
+    history->count -= sqlite3_changes(history->storage);
+}
 
 
 /**
@@ -175,11 +189,7 @@ void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 
     /* There are more entries than allowable. Remove the tail. */
     if(history->count > HISTORY_MAX_SIZE){
-        int status = sqlite3_exec(history->storage, HISTORY_REMOVE_OLDEST_UNLOCKED, NULL, NULL, NULL);
-        if(SQLITE_OK != status){
-            warn("Cannot remove oldest history record (error %d).\n", status);
-        }
-        history->count -= sqlite3_changes(history->storage);
+        clip_history_evict(history);
     }
 
     int id = sqlite3_last_insert_rowid(history->storage);
@@ -234,8 +244,9 @@ static int clip_history_callback_selection(void* data, int row, char** values, c
     // int id = atoi(values[0]);
     char* text = values[1];
     char* locked = values[2];
+    unsigned int count = strtoul(values[3], NULL, 10);
 
-    ClipboardEntry* entry = clip_clipboard_entry_new(text, locked != NULL);
+    ClipboardEntry* entry = clip_clipboard_entry_new(text, locked != NULL, count);
     *((GList**)data) = g_list_prepend(*((GList**)data), entry);
 
     return 0;

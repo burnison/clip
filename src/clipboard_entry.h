@@ -21,11 +21,13 @@
 
 typedef struct clipboard_entry ClipboardEntry;
 
-ClipboardEntry* clip_clipboard_entry_new(char* text, gboolean locked);
+ClipboardEntry* clip_clipboard_entry_new(char* text, gboolean locked, unsigned int count);
 ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry);
 void clip_clipboard_entry_free(ClipboardEntry* entry);
 
 char* clip_clipboard_entry_get_text(ClipboardEntry* entry);
+
+unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry);
 
 gboolean clip_clipboard_entry_get_locked(ClipboardEntry* entry);
 void clip_clipboard_entry_set_locked(ClipboardEntry* entry, gboolean locked);
