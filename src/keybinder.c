@@ -21,9 +21,8 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include <glib/gstdio.h>
-
 #include <string.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include <gtk/gtk.h>
@@ -73,6 +72,8 @@ struct Binding {
 static GSList *bindings = NULL;
 static guint32 last_event_time = 0;
 static gboolean processing_event = FALSE;
+static gboolean detected_xkb_extension = FALSE;
+static gboolean use_xkb_extension = FALSE;
 
 /* Return the modifier mask that needs to be pressed to produce key in the
  * given group (keyboard layout) and level ("shift level").
@@ -80,8 +81,8 @@ static gboolean processing_event = FALSE;
 static GdkModifierType
 FinallyGetModifiersForKeycode (XkbDescPtr xkb,
                                KeyCode    key,
-                              guint     group,
-                              guint     level)
+                               guint      group,
+                               guint      level)
 {
 	int nKeyGroups;
 	int effectiveGroup;
@@ -131,8 +132,8 @@ FinallyGetModifiersForKeycode (XkbDescPtr xkb,
  */
 static gboolean
 grab_ungrab_with_ignorable_modifiers (GdkWindow *rootwin,
-                                     guint       keycode,
-                                     guint       modifiers,
+                                      guint      keycode,
+                                      guint      modifiers,
                                       gboolean   grab)
 {
 	guint i;
@@ -166,7 +167,7 @@ grab_ungrab_with_ignorable_modifiers (GdkWindow *rootwin,
 	}
 	gdk_flush();
 	if (gdk_error_trap_pop()) {
-		TRACE (g_warning ("Failed grab/ungrab"));
+		TRACE (g_print ("Failed grab/ungrab!\n"));
 		if (grab) {
 			/* On error, immediately release keys again */
 			grab_ungrab_with_ignorable_modifiers(rootwin,
@@ -186,21 +187,23 @@ grab_ungrab_with_ignorable_modifiers (GdkWindow *rootwin,
  */
 static gboolean
 grab_ungrab (GdkWindow *rootwin,
-            guint       keyval,
-            guint       modifiers,
+             guint      keyval,
+             guint      modifiers,
              gboolean   grab)
 {
 	int k;
 	GdkKeymap *map;
 	GdkKeymapKey *keys;
 	gint n_keys;
-	GdkModifierType add_modifiers;
-	XkbDescPtr xmap;
+	GdkModifierType add_modifiers = 0;
+	XkbDescPtr xmap = NULL;
 	gboolean success = FALSE;
 
-	xmap = XkbGetMap(GDK_WINDOW_XDISPLAY(rootwin),
-	                 XkbAllClientInfoMask,
-	                 XkbUseCoreKbd);
+	if (use_xkb_extension) {
+		xmap = XkbGetMap(GDK_WINDOW_XDISPLAY(rootwin),
+		                 XkbAllClientInfoMask,
+		                 XkbUseCoreKbd);
+	}
 
 	map = gdk_keymap_get_default();
 	gdk_keymap_get_entries_for_keyval(map, keyval, &keys, &n_keys);
@@ -217,16 +220,24 @@ grab_ungrab (GdkWindow *rootwin,
 			continue;
 		}
 
-		add_modifiers = FinallyGetModifiersForKeycode(xmap,
+
+		TRACE (g_print("grab/ungrab keycode: %d, lev: %d, grp: %d, ",
+			keys[k].keycode, keys[k].level, keys[k].group));
+		if (use_xkb_extension) {
+			add_modifiers = FinallyGetModifiersForKeycode(xmap,
 		                                              keys[k].keycode,
 		                                              keys[k].group,
 		                                              keys[k].level);
+		} else if (keys[k].level > 0) {
+			/* skip shifted/modified keys in non-xkb mode
+			 * this might mean the key can't be bound at all
+			 */
+			continue;
+		}
 
 		if (add_modifiers == MODIFIERS_ERROR) {
 			continue;
 		}
-		TRACE (g_print("grab/ungrab keycode: %d, lev: %d, grp: %d, ",
-			keys[k].keycode, keys[k].level, keys[k].group));
 		TRACE (g_print("modifiers: 0x%x (consumed: 0x%x)\n",
 		               add_modifiers | modifiers, add_modifiers));
 		if (grab_ungrab_with_ignorable_modifiers(rootwin,
@@ -244,7 +255,9 @@ grab_ungrab (GdkWindow *rootwin,
 
 	}
 	g_free(keys);
-	XkbFreeClientMap(xmap, 0, TRUE);
+	if (xmap) {
+		XkbFreeClientMap(xmap, 0, TRUE);
+	}
 
 	return success;
 }
@@ -361,7 +374,8 @@ filter_func (GdkXEvent *gdk_xevent, GdkEvent *event, gpointer data)
 				xevent->xkey.keycode, 
 				xevent->xkey.state));
 
-		gdk_keymap_translate_keyboard_state(
+		if (use_xkb_extension) {
+			gdk_keymap_translate_keyboard_state(
 				keymap,
 				xevent->xkey.keycode,
 				modifiers,
@@ -370,6 +384,10 @@ filter_func (GdkXEvent *gdk_xevent, GdkEvent *event, gpointer data)
 				 */
 				WE_ONLY_USE_ONE_GROUP,
 				&keyval, NULL, NULL, &consumed);
+		} else {
+			consumed = 0;
+			keyval = XLookupKeysym(&xevent->xkey, 0);
+		}
 
 		/* Map non-virtual to virtual modifiers */
 		modifiers &= ~consumed;
@@ -448,6 +466,26 @@ keybinder_init ()
 {
 	GdkKeymap *keymap = gdk_keymap_get_default ();
 	GdkWindow *rootwin = gdk_get_default_root_window ();
+	Display *disp;
+	int xkb_opcode;
+	int xkb_event_base;
+	int xkb_error_base;
+	int majver = XkbMajorVersion;
+	int minver = XkbMinorVersion;
+
+	if (!(disp = XOpenDisplay(NULL))) {
+		g_warning("keybinder_init: Unable to open display");
+		return;
+	}
+
+	detected_xkb_extension = XkbQueryExtension(disp,
+	                                           &xkb_opcode,
+	                                           &xkb_event_base,
+	                                           &xkb_error_base,
+	                                           &majver, &minver);
+
+	use_xkb_extension = detected_xkb_extension;
+	TRACE(g_print("XKB: %d, version: %d, %d\n", use_xkb_extension, majver, minver));
 
 	gdk_window_add_filter (rootwin, filter_func, NULL);
 
@@ -463,6 +501,32 @@ keybinder_init ()
 			  "keys_changed",
 			  G_CALLBACK (keymap_changed),
 			  NULL);
+}
+
+/**
+ * keybinder_set_use_cooked_accelerators:
+ * @use_cooked: if %FALSE disable cooked accelerators
+ *
+ * "Cooked" accelerators use symbols produced by using modifiers such
+ * as shift or altgr, for example if "!" is produced by "Shift+1".
+ *
+ * If cooked accelerators are enabled, use "&lt;Ctrl&gt;exclam" to bind
+ * "Ctrl+!" If disabled, use "&lt;Ctrl&gt;&lt;Shift&gt;1" to bind
+ * "Ctrl+Shift+1". These two examples are not equal on all keymaps.
+ *
+ * The cooked accelerator keyvalue and modifiers are provided by the
+ * function gdk_keymap_translate_keyboard_state()
+ *
+ * Cooked accelerators are useful if you receive keystrokes from GTK to bind,
+ * but raw accelerators can be useful if you or the user inputs accelerators as
+ * text.
+ *
+ * Default: Enabled. Should be set before binding anything.
+ */
+void
+keybinder_set_use_cooked_accelerators (gboolean use_cooked)
+{
+	use_xkb_extension = use_cooked && detected_xkb_extension;
 }
 
 /**
@@ -535,10 +599,13 @@ keybinder_bind_full (const char *keystring,
  * @keystring: an accelerator description (gtk_accelerator_parse() format)
  * @handler:   callback function
  *
- * Unregister a specific previously bound callback for this keystring.
+ * Unregister a previously bound callback for this keystring.
+ *
+ * NOTE: multiple callbacks per keystring are not properly supported. You
+ * might as well use keybinder_unbind_all().
  *
  * This function is excluded from introspected bindings and is replaced by
- * keybinder_unbind_all.
+ * keybinder_unbind_all().
  */
 void
 keybinder_unbind (const char *keystring, KeybinderHandler handler)
