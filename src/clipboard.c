@@ -85,15 +85,13 @@ void clip_clipboard_set(Clipboard* clipboard, char* text)
     clip_clipboard_entry_free(clipboard->current);
     clipboard->current = clip_clipboard_entry_new(text, FALSE, 0);
 
-    if(clip_clipboard_is_history_enabled(clipboard)){
+    if(clip_clipboard_is_enabled(clipboard)){
         if(text == NULL){
             debug("New clipboard contents are null (probably a request to clear the clipboard). Removing head.\n");
             clip_history_remove_head(clipboard->history);
         } else {
             clip_history_prepend(clipboard->history, clipboard->current);
         }
-    } else {
-        debug("Clipboard is disabled. Not appending to history.\n");
     }
 }
 
@@ -131,7 +129,7 @@ void clip_clipboard_clear(Clipboard* clipboard)
 
 
 
-gboolean clip_clipboard_is_history_enabled(Clipboard* clipboard)
+gboolean clip_clipboard_is_enabled(Clipboard* clipboard)
 {
     return clipboard->enabled;
 }
@@ -139,8 +137,8 @@ gboolean clip_clipboard_is_history_enabled(Clipboard* clipboard)
 gboolean clip_clipboard_toggle_history(Clipboard* clipboard)
 {
     trace("Toggling clipboard.\n");
-    clipboard->enabled = !clip_clipboard_is_history_enabled(clipboard);
-    return clip_clipboard_is_history_enabled(clipboard);
+    clipboard->enabled = !clip_clipboard_is_enabled(clipboard);
+    return clip_clipboard_is_enabled(clipboard);
 }
 
 

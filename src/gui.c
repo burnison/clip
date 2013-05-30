@@ -101,7 +101,7 @@ static void clip_gui_update_menu_text(void)
         : GUI_SEARCH_MESSAGE;
     clip_gui_set_markedup_label(GTK_BIN(menu_item_search), "<i><b>%s</b></i>", search_text);
 
-    char* history_text = clip_clipboard_is_history_enabled(clipboard)
+    char* history_text = clip_clipboard_is_enabled(clipboard)
         ? GUI_HISTORY_DISABLE_MESSAGE
         : GUI_HISTORY_ENABLE_MESSAGE;
     clip_gui_set_normal_label(GTK_BIN(menu_item_history), history_text);

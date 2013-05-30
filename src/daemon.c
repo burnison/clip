@@ -35,6 +35,11 @@ struct daemon {
  */
 static gboolean clip_daemon_poll(Daemon* daemon)
 {
+    // If the clipboard isn't enabled, don't bother looking.
+    if(!clip_clipboard_is_enabled(daemon->clipboard)){
+        return TRUE;
+    }
+
     ClipboardEntry* clipboard_entry = clip_clipboard_get(daemon->clipboard);
     char* clipboard_contents = clipboard_entry == NULL ? NULL : clip_clipboard_entry_get_text(clipboard_entry);
     char* provider_contents = clip_provider_get_current(daemon->provider);
