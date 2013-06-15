@@ -113,7 +113,11 @@ static void clip_gui_update_menu_text(void)
 
 static gboolean clip_gui_is_selectable(GtkWidget* widget)
 {
-    return GTK_IS_LABEL(widget) && gtk_widget_is_sensitive(widget);
+    return GTK_IS_LABEL(widget) && gtk_widget_is_sensitive(widget)
+        && widget != gtk_bin_get_child(GTK_BIN(menu_item_clear))
+        && widget != gtk_bin_get_child(GTK_BIN(menu_item_edit))
+        && widget != gtk_bin_get_child(GTK_BIN(menu_item_history))
+        && widget != gtk_bin_get_child(GTK_BIN(menu_item_empty));
 }
 
 
@@ -261,6 +265,8 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
                 clip_gui_select_index(keyval - GDK_KEY_1);
                 update_required = FALSE;
                 break;
+            case GDK_KEY_j:
+
             default:
                 break;
         }
