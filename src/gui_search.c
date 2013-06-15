@@ -132,13 +132,9 @@ void clip_gui_search_remove_char(void)
 void clip_gui_search_append(guint keyval)
 {
     if(!clip_gui_search_in_progress()){
-        if(keyval == GUI_SEARCH_LEADER){
-            clip_gui_search_start();
-        }
+        debug("Tried to append characters when not in search mode.\n");
         return;
-    } 
-    
-    if(!g_unichar_validate(keyval)){
+    } else if(!g_unichar_validate(keyval)){
         debug("Tried to append a non-unicode character to the search term.\n");
         return;
     } 

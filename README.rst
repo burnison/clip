@@ -53,6 +53,12 @@ may be disabled by prefixing a pattern with "(^i)"). The first history item matc
 highlighted; pressing tab will move the active focus to the next match. Pressing enter or clicking on the desired menu
 item will set it as active.
 
+Positional Selection
+--------------------
+
+When pressing 1-9, the nth menu item will be selected. This behaviour is unavailable when searching and is intended
+for quick access when the actual position is already known.
+
 Deleting Individual History Items
 ---------------------------------
 

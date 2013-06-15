@@ -128,26 +128,67 @@ static void clip_gui_remove_selected(void)
     gtk_container_remove(GTK_CONTAINER(menu), selected);
 }
 
+
+
+
+
+static gboolean clip_gui_is_selectable(GtkWidget* widget)
+{
+    return GTK_IS_LABEL(widget) && gtk_widget_is_sensitive(widget);
+}
+
+
+/**
+ * Moves the currently selected item no the nth index.
+ */
+static void clip_gui_select_index(unsigned int index)
+{
+    if(index > 8){
+        error("Captured an out-of-range selection index (1-9). This is probably a key mapping bug.\n");
+        return;
+    }
+
+    gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
+
+    GList* children = gtk_container_get_children(GTK_CONTAINER(menu));
+    GList* next = g_list_first(children);
+
+    int i = 0;
+    while((next = g_list_next(next))){
+        GtkWidget* contents = gtk_bin_get_child(GTK_BIN(next->data));
+        if(clip_gui_is_selectable(contents) && i++ == index){
+            gtk_menu_item_activate(GTK_MENU_ITEM(next->data));
+            gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
+            break;
+        }
+    }
+}
+
+
 /**
  * Moves the currently selected item to the nth match on the menu.
  */
 static void clip_gui_search_select_match(void)
 {
-    // Because this is regex, an empty string will always match.
-    if(clip_gui_search_get_length() < 1){
+    if(!clip_gui_search_in_progress()){
+        // Nothing can be done if there is no search in progress.
+        return;
+    } else if(clip_gui_search_get_length() < 1){
+        // Because this is regex, an empty string will always match.
         return;
     }
+
     gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
 
     int active_position = 0;
     GList* children = gtk_container_get_children(GTK_CONTAINER(menu));
     GList* next = g_list_first(children);
 
+    // Iterate through each list and check if it's a match.
     GtkWidget* first_match = NULL;
     while((next = g_list_next(next))){
         GtkWidget* contents = gtk_bin_get_child(GTK_BIN(next->data));
-        // If it's not a label, or if the label is disabled, ignore.
-        if(!(GTK_IS_LABEL(contents) && gtk_widget_is_sensitive(contents))){
+        if(!clip_gui_is_selectable(contents)){
             continue;
         }
         GtkLabel* label = GTK_LABEL(contents);
@@ -180,40 +221,57 @@ static void clip_gui_search_select_match(void)
     g_list_free(children);
 }
 
-
 static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointer data)
 {
     guint keyval = ((GdkEventKey*)event)->keyval;
-    switch(keyval){
-        case GDK_KEY_Escape:
-        case GDK_KEY_Down:
-        case GDK_KEY_Up:
-        case GDK_KEY_Page_Up:
-        case GDK_KEY_Page_Down:
-        case GDK_KEY_Home:
-        case GDK_KEY_End:
-        case GDK_KEY_Return:
-            clip_gui_search_end();
-            break;
-		case GDK_KEY_Delete:
-            clip_gui_remove_selected();
-			break;
-        case GDK_KEY_BackSpace:
-            clip_gui_search_remove_char();
-            break;
-        case GDK_KEY_Tab:
-            clip_gui_search_get_and_increment_position();
-            break;
-        default:
-            clip_gui_search_append(keyval);
-            break;
-    }
-
-    if(clip_gui_search_in_progress()){
+    gboolean update_required = TRUE;
+    if(!clip_gui_search_in_progress()){
+        switch(keyval){
+            case GUI_SEARCH_LEADER:
+                clip_gui_search_start();
+                break;
+            case GDK_KEY_Delete:
+                clip_gui_remove_selected();
+                break;
+            case GDK_KEY_1: case GDK_KEY_2: case GDK_KEY_3:
+            case GDK_KEY_4: case GDK_KEY_5: case GDK_KEY_6:
+            case GDK_KEY_7: case GDK_KEY_8: case GDK_KEY_9:
+                clip_gui_select_index(keyval - GDK_KEY_1);
+                update_required = FALSE;
+                break;
+            default:
+                break;
+        }
+    } else { 
+        switch(keyval){
+            case GDK_KEY_Escape:
+            case GDK_KEY_Down:
+            case GDK_KEY_Up:
+            case GDK_KEY_Page_Up:
+            case GDK_KEY_Page_Down:
+            case GDK_KEY_Home:
+            case GDK_KEY_End:
+            case GDK_KEY_Return:
+                clip_gui_search_end();
+                update_required = FALSE;
+                break;
+            case GDK_KEY_BackSpace:
+                clip_gui_search_remove_char();
+                break;
+            case GDK_KEY_Tab:
+                clip_gui_search_get_and_increment_position();
+                break;
+            default:
+                clip_gui_search_append(keyval);
+                break;
+        }
         clip_gui_search_select_match();
     }
 
-    clip_gui_update_menu_text();
+    if(update_required)
+    {
+        clip_gui_update_menu_text();
+    }
 
     // If search mode is turned on, drop all subsequent callbacks (like mnemonics).
     return clip_gui_search_in_progress();
@@ -288,6 +346,8 @@ static void clip_gui_cb_remove_menu_item(GtkWidget* item, gpointer data)
 static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
 {
     trace("Edit current value.\n");
+
+    gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
 
     ClipboardEntry* current_entry = clip_clipboard_get(clipboard);
     char* current = clip_clipboard_entry_get_text(current_entry);
