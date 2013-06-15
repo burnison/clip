@@ -35,8 +35,10 @@ void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);
 
 void clip_clipboard_clear(Clipboard* clipboard);
 
-gboolean clip_clipboard_toggle_history(Clipboard* clipboard);
 gboolean clip_clipboard_is_enabled(Clipboard* clipboard);
+gboolean clip_clipboard_toggle_history(Clipboard* clipboard);
+void clip_clipboard_enable_history(Clipboard* clipboard);
+void clip_clipboard_disable_history(Clipboard* clipboard);
 
 GList* clip_clipboard_get_history(Clipboard* clipboard);
 void clip_clipboard_free_history(GList* history);

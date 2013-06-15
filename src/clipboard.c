@@ -141,6 +141,15 @@ gboolean clip_clipboard_toggle_history(Clipboard* clipboard)
     return clip_clipboard_is_enabled(clipboard);
 }
 
+void clip_clipboard_enable_history(Clipboard* clipboard)
+{
+    clipboard->enabled = TRUE;
+}
+
+void clip_clipboard_disable_history(Clipboard* clipboard)
+{
+    clipboard->enabled = FALSE;
+}
 
 
 GList* clip_clipboard_get_history(Clipboard* clipboard)

@@ -66,6 +66,12 @@ Clip provides the ability to delete individual history items. To delete a single
 to the item to be deleted. Press the Delete key on your keyboard. If unlocked, the item will be removed from the
 history.
 
+Editing Current Value
+---------------------
+
+Clip allows you to edit the current value of the clip board by selecting the "Edit" menu item. This will pop-up a dialog
+in which you can make any changes. Pressing OK will replace the current value with the changes you have made.
+
 
 
 Features
