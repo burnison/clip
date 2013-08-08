@@ -21,15 +21,17 @@
 
 
 struct clipboard_entry {
+    int64_t id;
     char* text;
     gboolean locked;
     unsigned int count;
 };
 
 
-ClipboardEntry* clip_clipboard_entry_new(char* text, gboolean locked, unsigned int count)
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char* text, gboolean locked, unsigned int count)
 {
     ClipboardEntry* entry = g_malloc(sizeof(ClipboardEntry));
+    entry->id = id;
     entry->text = g_strdup(text);
     entry->locked = locked;
     entry->count = count;
@@ -41,7 +43,7 @@ ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry)
     if(entry == NULL){
         return NULL;
     }
-    return clip_clipboard_entry_new(entry->text, entry->locked, entry->count);
+    return clip_clipboard_entry_new(entry->id, entry->text, entry->locked, entry->count);
 }
 
 void clip_clipboard_entry_free(ClipboardEntry* entry)
@@ -54,6 +56,10 @@ void clip_clipboard_entry_free(ClipboardEntry* entry)
 }
 
 
+gboolean clip_clipboard_entry_is_new(ClipboardEntry* entry)
+{
+    return entry->id == 0;
+}
 
 char* clip_clipboard_entry_get_text(ClipboardEntry* entry)
 {
@@ -65,6 +71,29 @@ char* clip_clipboard_entry_get_text(ClipboardEntry* entry)
     entry->count++;
 
     return entry->text;
+}
+
+void clip_clipboard_entry_set_text(ClipboardEntry* entry, char* text)
+{
+    if(entry == NULL){
+        return;
+    }
+    char* old_text = entry->text;
+    entry->text = g_strdup(text);
+    g_free(old_text);
+}
+
+int64_t clip_clipboard_entry_get_id(ClipboardEntry* entry)
+{
+    if(entry == NULL){
+        return 0;
+    }
+    return entry->id;
+}
+
+void clip_clipboard_entry_set_id(ClipboardEntry* entry, int64_t id)
+{
+    entry->id = id;
 }
 
 unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry)

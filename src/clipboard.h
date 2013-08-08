@@ -29,7 +29,7 @@ void clip_clipboard_free(Clipboard* clipboard);
 
 
 ClipboardEntry* clip_clipboard_get(Clipboard* clipboard);
-void clip_clipboard_set(Clipboard* clipboard, char* text);
+void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry);
 void clip_clipboard_remove(Clipboard* clipboard, ClipboardEntry* entry);
 void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);
 

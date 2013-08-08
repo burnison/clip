@@ -34,13 +34,13 @@
                                "    locked TIMESTAMP"\
                                ")"
 // The usage count will be 0 when null (i.e. no value).
-#define HISTORY_INSERT_HISTORY "INSERT OR REPLACE INTO history(text, created, locked, usage_count) VALUES(?1, current_timestamp, "\
-        "(SELECT locked FROM history WHERE text = ?1), "\
-        "(SELECT usage_count + 1 FROM history WHERE text = ?1))"
+#define HISTORY_INSERT_HISTORY "INSERT INTO history(text, created, locked, usage_count) VALUES(?1, current_timestamp, NULL, 0)"
+#define HISTORY_UPDATE_HISTORY "UPDATE history SET text = ?1, created = current_timestamp WHERE id = ?2"
 
-#define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE text = ? AND locked IS NULL"
+#define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE id = ? AND locked IS NULL"
 #define HISTORY_TRUNCATE_HISTORY "DELETE FROM history WHERE locked IS NULL"
 #define HISTORY_REMOVE_NEWEST_UNLOCKED "DELETE FROM history WHERE id = (SELECT max(id) FROM history WHERE locked IS NULL)"
+#define HISTORY_REPLACE_HISTORY "UPDATE history SET text = ?1 null END WHERE text = ?2"
 
 // Use a LRU+LFU eviction policy.
 #define HISTORY_EVICT_SINGLE "DELETE FROM history WHERE id = (SELECT id FROM history WHERE locked IS NULL ORDER BY usage_count, id LIMIT 1)"
@@ -48,7 +48,7 @@
 #define HISTORY_SELECT_HISTORY "SELECT id, text, locked, usage_count FROM history ORDER BY created, id"
 #define HISTORY_SELECT_COUNT "SELECT count(*) FROM history"
 
-#define HISTORY_UPDATE_TOGGLE_LOCK "UPDATE history SET locked =   CASE WHEN locked IS NULL THEN current_timestamp     ELSE null END WHERE text = ?"
+#define HISTORY_UPDATE_TOGGLE_LOCK "UPDATE history SET locked =   CASE WHEN locked IS NULL THEN current_timestamp     ELSE null END WHERE id = ?"
 
 
 struct history {;
@@ -56,20 +56,17 @@ struct history {;
     int count;
 };
 
-
-static int clip_history_callback_count(void* data, int row, char** values, char** names)
-{
-    *((int*)data) = atoi(values[0]);
-    debug("History currently has %d records.\n", *(int*)data);
-    return 0;
-}
-
 static void clip_history_storage_count(ClipboardHistory* history)
 {
-    int count_status = sqlite3_exec(history->storage, HISTORY_SELECT_COUNT, clip_history_callback_count, &history->count, NULL);
-    if(SQLITE_OK != count_status){
-        warn("Cannot attain history count (error %d).\n", count_status);
+    sqlite3_stmt *statement = NULL;
+    int status = sqlite3_prepare(history->storage, HISTORY_SELECT_COUNT, -1, &statement, NULL);
+    if(status != SQLITE_OK){
+        warn("Cannot attain history count (error %d).\n", status);
+    } else if(sqlite3_step(statement) == SQLITE_ROW){
+        history->count = sqlite3_column_int64(statement, 0);
+        debug("History currently has %d records.\n", history->count);
     }
+    sqlite3_finalize(statement);
 }
 
 static void clip_history_storage_open(ClipboardHistory* history)
@@ -114,49 +111,8 @@ void clip_history_free(ClipboardHistory* history)
         warn("Attempted to free NULL history.\n");
         return;
     }
-
     clip_history_close_storage(history);
-
     g_free(history);
-}
-
-
-
-
-
-
-
-/**
- * Returns the number of changed rows.
- */
-static int clip_history_storage_execute(const char* query, ClipboardHistory* history, char* text)
-{
-    int status = 0;
-    sqlite3_stmt* statement = NULL;
-
-    status = sqlite3_prepare(history->storage, query, -1, &statement, NULL);
-    if(SQLITE_OK != status || statement == NULL){
-        warn("Couldn't prepare history statement (error %d).\n", status);
-        goto finalize;
-    }
-
-    status = sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
-    if(SQLITE_OK != status){
-        warn("Couldn't bind text to history statement (error %d).\n", status);
-        goto finalize;
-    }
-
-    status = sqlite3_step(statement);
-    if(SQLITE_DONE != status){
-        warn("Couldn't execute history statement (error %d).\n", status);
-        goto finalize;
-    }
-
-finalize:
-    if(statement != NULL){
-        sqlite3_finalize(statement);
-    }
-    return sqlite3_changes(history->storage);
 }
 
 
@@ -165,8 +121,55 @@ static void clip_history_evict(ClipboardHistory* history)
     int status = sqlite3_exec(history->storage, HISTORY_EVICT_SINGLE, NULL, NULL, NULL);
     if(SQLITE_OK != status){
         warn("Cannot remove oldest history record (error %d).\n", status);
+        return;
     }
     history->count -= sqlite3_changes(history->storage);
+}
+
+
+
+static void clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* entry)
+{
+    trace("Prepending new entry.\n");
+
+    sqlite3_stmt* statement = NULL;
+    char* text = clip_clipboard_entry_get_text(entry);
+
+    int status = sqlite3_prepare(history->storage, HISTORY_INSERT_HISTORY, -1, &statement, NULL);
+    if(status == SQLITE_OK){
+        sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
+        if(sqlite3_step(statement) == SQLITE_DONE){
+            int64_t id = sqlite3_last_insert_rowid(history->storage);
+            clip_clipboard_entry_set_id(entry, id);
+            debug("Created new history entry, %ld.\n", id);
+        } else {
+            warn("Couldn't prepend new entry (error %d).\n", status);
+        }
+
+    } else {
+        warn("Couldn't prepare entry prepend (error %d).\n", status);
+    }
+    sqlite3_finalize(statement);
+}
+
+static void clip_history_prepend_existing(ClipboardHistory* history, ClipboardEntry* entry)
+{
+    sqlite3_stmt* statement = NULL;
+    int64_t id = clip_clipboard_entry_get_id(entry);
+    char* text = clip_clipboard_entry_get_text(entry);
+
+    trace("Promoting existing entry, %ld, to top.\n", id);
+    int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_HISTORY, -1, &statement, NULL);
+    if(status == SQLITE_OK){
+        sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(statement, 2, id);
+        if(sqlite3_step(statement) != SQLITE_DONE){
+            warn("Couldn't prepend existing entry, %ld (error %d).\n", id, status);
+        }
+    } else {
+        warn("Couldn't prepare entry prepend for %ld (error %d).\n", id, status);
+    }
+    sqlite3_finalize(statement);
 }
 
 
@@ -175,25 +178,19 @@ static void clip_history_evict(ClipboardHistory* history)
  */
 void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    trace("Prepending/promoting text to history.\n");
-    char* key = clip_clipboard_entry_get_text(entry);
+    if(clip_clipboard_entry_is_new(entry)){
+        clip_history_prepend_new(history, entry);
+    } else {
+        clip_history_prepend_existing(history, entry);
+    }
 
-    clip_history_storage_execute(HISTORY_INSERT_HISTORY, history, key);
-
-    /*
-     * Because this statement uses a create/replace, the number of affected rows
-     * is not the same as inserted rows. This is basically a brute-force
-     * approach that may need to change over time.
-     */
+    // Reacquire the new count (an insert may have been a replace).
     clip_history_storage_count(history);
 
-    /* There are more entries than allowable. Remove the tail. */
+    // There are more entries than allowable. Remove the tail.
     if(history->count > HISTORY_MAX_SIZE){
         clip_history_evict(history);
     }
-
-    int id = sqlite3_last_insert_rowid(history->storage);
-    debug("Created new history entry, %d.\n", id);
 }
 
 /**
@@ -201,9 +198,20 @@ void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
  */
 void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    trace("Removing clipboard entry.\n");
-    char* key = clip_clipboard_entry_get_text(entry);
-    clip_history_storage_execute(HISTORY_DELETE_HISTORY, history, key);
+    int64_t id = clip_clipboard_entry_get_id(entry);
+    trace("Removing clipboard entry %ld.\n", id);
+
+    sqlite3_stmt* statement = NULL;
+    int status = sqlite3_prepare(history->storage, HISTORY_DELETE_HISTORY, -1, &statement, NULL);
+    if(status == SQLITE_OK){
+        sqlite3_bind_int64(statement, 1, id);
+        if(sqlite3_step(statement) != SQLITE_DONE){
+            warn("Couldn't remove entry, %ld (error %d).\n", id, status);
+        }
+    } else {
+        warn("Couldn't prepare entry removal query for %ld (error %d).\n", id, status);
+    }
+    sqlite3_finalize(statement);
 }
 
 /**
@@ -220,9 +228,20 @@ void clip_history_remove_head(ClipboardHistory* history)
 
 void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    trace("Toggling entry lock.\n");
-    char* key = clip_clipboard_entry_get_text(entry);
-    clip_history_storage_execute(HISTORY_UPDATE_TOGGLE_LOCK, history, key);
+    int64_t id = clip_clipboard_entry_get_id(entry);
+    trace("Toggling entry lock for %ld.\n", id);
+
+    sqlite3_stmt* statement = NULL;
+    int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_TOGGLE_LOCK, -1, &statement, NULL);
+    if(status == SQLITE_OK){
+        sqlite3_bind_int64(statement, 1, id);
+        if(sqlite3_step(statement) != SQLITE_DONE){
+            warn("Couldn't toggle lock for %ld (error %d).\n", id, status);
+        }
+    } else {
+        warn("Couldn't prepare lock toggle query for %ld (error %d).\n", id, status);
+    }
+    sqlite3_finalize(statement);
 }
 
 
@@ -237,34 +256,24 @@ void clip_history_clear(ClipboardHistory* history)
 }
 
 
-
-
-static int clip_history_callback_selection(void* data, int row, char** values, char** names)
-{
-    // int id = atoi(values[0]);
-    char* text = values[1];
-    char* locked = values[2];
-    unsigned int count = strtoul(values[3], NULL, 10);
-
-    ClipboardEntry* entry = clip_clipboard_entry_new(text, locked != NULL, count);
-    *((GList**)data) = g_list_prepend(*((GList**)data), entry);
-
-    return 0;
-}
-
 GList* clip_history_get_list(ClipboardHistory* history)
 {
-    int dummy = 1;
-    int* pdummy = &dummy;
-    GList* list = g_list_prepend((GList*)NULL, pdummy);
-
-    int status = sqlite3_exec(history->storage, HISTORY_SELECT_HISTORY, clip_history_callback_selection, &list, NULL);
-    if(SQLITE_OK != status){
-        error("Couldn't return history list (error %d).\n", status);
-        return NULL;
+    GList* list = NULL;
+    sqlite3_stmt *statement = NULL;
+    int status = sqlite3_prepare(history->storage, HISTORY_SELECT_HISTORY, -1, &statement, NULL);
+    if(status != SQLITE_OK){
+        warn("Cannot prepare history selection query (error %d).\n", status);
+    } else {
+        while(sqlite3_step(statement) == SQLITE_ROW){
+            int64_t id = sqlite3_column_int64(statement, 0);
+            char* text = (char*)sqlite3_column_text(statement, 1);
+            char* locked = (char*)sqlite3_column_text(statement, 2);
+            unsigned int count = sqlite3_column_int64(statement, 3);
+            ClipboardEntry* entry = clip_clipboard_entry_new(id, text, locked != NULL, count);
+            list = g_list_prepend(list, entry);
+        }
     }
-    list = g_list_remove(list, pdummy);
-
+    sqlite3_finalize(statement);
     return list;
 }
 

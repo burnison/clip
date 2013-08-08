@@ -324,10 +324,7 @@ static gboolean clip_gui_cb_toggle_lock(GtkWidget* widget, GdkEvent* event, gpoi
 static gboolean clip_gui_cb_history_activated(GtkMenuItem* widget, gpointer data)
 {
     trace("History item activated.\n");
-
-    char* text = clip_clipboard_entry_get_text(data);
-    clip_clipboard_set(clipboard, text);
-
+    clip_clipboard_set(clipboard, data);
     return FALSE;
 }
 
@@ -378,20 +375,16 @@ static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
     gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
 
     ClipboardEntry* current_entry = clip_clipboard_get(clipboard);
-    char* current = clip_clipboard_entry_get_text(current_entry);
 
     clip_clipboard_disable_history(clipboard);
+    char* current = clip_clipboard_entry_get_text(current_entry);
     char* edited = clip_gui_editor_edit_text(current);
     clip_clipboard_enable_history(clipboard);
 
     if(edited != NULL){
-        // Remove the existing value and swap it out with the new one.
-        GtkWidget* head = clip_gui_get_nth_menu_item(0);
-        clip_clipboard_remove(clipboard, current_entry);
-        clip_gui_remove(head);
-
         // Set the edited value as head.
-        clip_clipboard_set(clipboard, edited);
+        clip_clipboard_entry_set_text(current_entry, edited);
+        clip_clipboard_set(clipboard, current_entry);
     } else {
         debug("Edited text is unchanged. Ignoring edit request.\n");
     }
@@ -399,8 +392,6 @@ static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
     clip_gui_editor_free_text(edited);
     clip_clipboard_entry_free(current_entry);
 }
-
-
 
 
 static void clip_gui_entry_add(ClipboardEntry* entry)

@@ -66,8 +66,9 @@ void clip_clipboard_free(Clipboard* clipboard)
  * Sets the clipboard's current value to a copy of the specified text. If text is NULL, the current clipboard value,
  * along with its associated history entry, are purged.
  */
-void clip_clipboard_set(Clipboard* clipboard, char* text)
+void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry)
 {
+    char* text = clip_clipboard_entry_get_text(entry);
     debug("Setting new active clipboard value, \"%.*s...\".\n", 30, text);
 
     // If the active value is the same, just return.
@@ -83,7 +84,7 @@ void clip_clipboard_set(Clipboard* clipboard, char* text)
 
     // Set the new value.
     clip_clipboard_entry_free(clipboard->current);
-    clipboard->current = clip_clipboard_entry_new(text, FALSE, 0);
+    clipboard->current = clip_clipboard_entry_clone(entry);
 
     if(clip_clipboard_is_enabled(clipboard)){
         if(text == NULL){

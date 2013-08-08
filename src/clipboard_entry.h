@@ -18,14 +18,21 @@
  */
 
 #include <glib.h>
+#include <inttypes.h>
 
 typedef struct clipboard_entry ClipboardEntry;
 
-ClipboardEntry* clip_clipboard_entry_new(char* text, gboolean locked, unsigned int count);
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char* text, gboolean locked, unsigned int count);
 ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry);
 void clip_clipboard_entry_free(ClipboardEntry* entry);
 
+gboolean clip_clipboard_entry_is_new(ClipboardEntry* entry);
+
+int64_t clip_clipboard_entry_get_id(ClipboardEntry* entry);
+void clip_clipboard_entry_set_id(ClipboardEntry* entry, int64_t id);
+
 char* clip_clipboard_entry_get_text(ClipboardEntry* entry);
+void clip_clipboard_entry_set_text(ClipboardEntry* entry, char* text);
 
 unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry);
 

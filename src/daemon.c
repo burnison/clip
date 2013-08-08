@@ -46,7 +46,9 @@ static gboolean clip_daemon_poll(Daemon* daemon)
 
     if(g_strcmp0(clipboard_contents, provider_contents)){
         trace("Provider clipboard contents differ from active clipboard.\n");
-        clip_clipboard_set(daemon->clipboard, provider_contents);
+        ClipboardEntry* entry = clip_clipboard_entry_new(0, provider_contents, FALSE, 0);
+        clip_clipboard_set(daemon->clipboard, entry);
+        clip_clipboard_entry_free(entry);
     }
 
     clip_provider_free_current(provider_contents);
