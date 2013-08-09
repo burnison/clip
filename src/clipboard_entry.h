@@ -31,10 +31,18 @@ gboolean clip_clipboard_entry_is_new(ClipboardEntry* entry);
 int64_t clip_clipboard_entry_get_id(ClipboardEntry* entry);
 void clip_clipboard_entry_set_id(ClipboardEntry* entry, int64_t id);
 
+/**
+ * Return a pointer to the entry's text.
+ */
 char* clip_clipboard_entry_get_text(ClipboardEntry* entry);
+/**
+ * Change the entry's text.
+ */
 void clip_clipboard_entry_set_text(ClipboardEntry* entry, char* text);
 
 unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry);
 
 gboolean clip_clipboard_entry_get_locked(ClipboardEntry* entry);
 void clip_clipboard_entry_set_locked(ClipboardEntry* entry, gboolean locked);
+
+gboolean clip_clipboard_entry_equals(ClipboardEntry* a, ClipboardEntry* b);

@@ -84,12 +84,10 @@ static void clip_gui_set_entry_text(GtkWidget *menu_item, Data *data)
         g_string_append(mask, "</b>");
     }
 
-    ClipboardEntry* current = clip_clipboard_get(clipboard);
-    if(!g_strcmp0(clip_clipboard_entry_get_text(current), text)){
+    if(clip_clipboard_is_head(clipboard, data->entry)){
         g_string_prepend(mask, "<i>");
         g_string_append(mask, "</i>");
     }
-    clip_clipboard_entry_free(current);
 
     if(data->row < 10){
         GString *numbered = g_string_new("");
@@ -523,6 +521,7 @@ void clip_gui_init(Clipboard* _clipboard)
     selected_entry = NULL;
 
     menu = gtk_menu_new();
+    gtk_widget_set_double_buffered(menu, TRUE);
     g_signal_connect(G_OBJECT(menu), "key-press-event", G_CALLBACK(clip_gui_cb_keypress), NULL);
 
     menu_item_search = g_object_ref(gtk_menu_item_new_with_label(GUI_SEARCH_MESSAGE));

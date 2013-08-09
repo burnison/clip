@@ -33,20 +33,44 @@ Clipboard* clip_clipboard_new(ClipboardProvider* provider);
 void clip_clipboard_free(Clipboard* clipboard);
 
 
+/**
+ * Gets a copy of the current clipboard's contents. This copy must be
+ * freed when no longer used.
+ */
 ClipboardEntry* clip_clipboard_get(Clipboard* clipboard);
+/**
+ * Identifies if the specified entry is the current entry of the clipboard.
+ */
+gboolean clip_clipboard_is_head(Clipboard* clipboard, ClipboardEntry* entry);
+
+
+/**
+ * Sets the clipboard's current value to a copy of the current entry. This has
+ * the same characteristics as set_new.
+ */
 void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry);
+/**
+ * Sets the clipboards current value to a copy of the specified text. If text is
+ * NULL, the current clipboard value, along with its associated history entry,
+ * are purged.
+ */
+void clip_clipboard_set_new(Clipboard* clipboard, char* text);
+
+
 void clip_clipboard_remove(Clipboard* clipboard, ClipboardEntry* entry);
 void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);
-
 void clip_clipboard_clear(Clipboard* clipboard);
+
 
 gboolean clip_clipboard_is_enabled(Clipboard* clipboard);
 gboolean clip_clipboard_toggle_history(Clipboard* clipboard);
 void clip_clipboard_enable_history(Clipboard* clipboard);
 void clip_clipboard_disable_history(Clipboard* clipboard);
 
+
 TrimMode clip_clipboard_next_trim_mode(Clipboard* clipboard);
 TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard);
+
 
 GList* clip_clipboard_get_history(Clipboard* clipboard);
 void clip_clipboard_free_history(GList* history);

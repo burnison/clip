@@ -65,7 +65,6 @@ char* clip_clipboard_clean(Clipboard* clipboard, char* text)
     if(text == NULL){
         return NULL;
     }
-
     char *str = g_strdup(text);
     switch(clipboard->trim_mode) {
         case TRIM_CHOMP:
@@ -94,10 +93,13 @@ static gboolean clip_clipboard_different(char* new, char* old)
     return different;
 }
 
-/**
- * Sets the clipboard's current value to a copy of the specified text. If text is NULL, the current clipboard value,
- * along with its associated history entry, are purged.
- */
+void clip_clipboard_set_new(Clipboard* clipboard, char* text)
+{
+	ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0);
+	clip_clipboard_set(clipboard, entry);
+	clip_clipboard_entry_free(entry);
+}
+
 void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry)
 {
     char *new = clip_clipboard_entry_get_text(entry);
@@ -148,12 +150,17 @@ exit:
     g_free(clean_new);
 }
 
-/**
- * Gets a copy of the current clipboard's contents. This copy must be freed when no longer used.
- */
+
+
+
 ClipboardEntry* clip_clipboard_get(Clipboard* clipboard)
 {
     return clip_clipboard_entry_clone(clipboard->current);
+}
+
+gboolean clip_clipboard_is_head(Clipboard* clipboard, ClipboardEntry* entry)
+{
+	return clip_clipboard_entry_equals(entry, clipboard->current);
 }
 
 
@@ -187,6 +194,8 @@ void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry)
 }
 
 
+
+
 void clip_clipboard_clear(Clipboard* clipboard)
 {
     clip_history_clear(clipboard->history);
@@ -195,7 +204,6 @@ void clip_clipboard_clear(Clipboard* clipboard)
     clip_clipboard_entry_free(clipboard->current);
     clipboard->current = NULL;
 }
-
 
 
 
@@ -212,6 +220,9 @@ gboolean clip_clipboard_toggle_history(Clipboard* clipboard)
     return clip_clipboard_is_enabled(clipboard);
 }
 
+
+
+
 void clip_clipboard_enable_history(Clipboard* clipboard)
 {
     clipboard->enabled = TRUE;
@@ -221,6 +232,8 @@ void clip_clipboard_disable_history(Clipboard* clipboard)
 {
     clipboard->enabled = FALSE;
 }
+
+
 
 
 GList* clip_clipboard_get_history(Clipboard* clipboard)

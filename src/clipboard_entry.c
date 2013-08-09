@@ -66,10 +66,7 @@ char* clip_clipboard_entry_get_text(ClipboardEntry* entry)
     if(entry == NULL){
         return NULL;
     }
-
-    // Increment the access counter.
     entry->count++;
-
     return entry->text;
 }
 
@@ -115,4 +112,16 @@ gboolean clip_clipboard_entry_get_locked(ClipboardEntry* entry)
 void clip_clipboard_entry_set_locked(ClipboardEntry* entry, gboolean locked)
 {
     entry->locked = locked;
+}
+
+
+
+gboolean clip_clipboard_entry_equals(ClipboardEntry* a, ClipboardEntry* b)
+{
+	if(a == b) {
+		return TRUE;
+	} else if(a == NULL || b == NULL) {
+		return FALSE;
+	}
+	return a->id == b->id || !g_strcmp0(a->text, b->text);
 }
