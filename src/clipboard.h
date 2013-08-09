@@ -22,6 +22,11 @@
 
 #include <glib.h>
 
+#ifndef __CLIP_CLIPBOARD_TYPE_H__
+#define __CLIP_CLIPBOARD_TYPE_H__
+typedef enum { TRIM_OFF, TRIM_CHOMP, TRIM_CHUG, TRIM_STRIP,     TRIM_STOP } TrimMode;
+#endif
+
 typedef struct clipboard Clipboard; 
 
 Clipboard* clip_clipboard_new(ClipboardProvider* provider);
@@ -39,6 +44,9 @@ gboolean clip_clipboard_is_enabled(Clipboard* clipboard);
 gboolean clip_clipboard_toggle_history(Clipboard* clipboard);
 void clip_clipboard_enable_history(Clipboard* clipboard);
 void clip_clipboard_disable_history(Clipboard* clipboard);
+
+TrimMode clip_clipboard_next_trim_mode(Clipboard* clipboard);
+TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard);
 
 GList* clip_clipboard_get_history(Clipboard* clipboard);
 void clip_clipboard_free_history(GList* history);

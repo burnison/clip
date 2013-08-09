@@ -20,6 +20,7 @@
 #include "clipboard.h"
 #include "history.h"
 #include "utils.h"
+#include "string.h"
 
 #include <glib.h>
 
@@ -28,6 +29,7 @@ struct clipboard {
     ClipboardProvider* provider;
     ClipboardHistory* history;
     ClipboardEntry* current;
+    TrimMode trim_mode;
     gboolean enabled;
 };
 
@@ -40,6 +42,7 @@ Clipboard* clip_clipboard_new(ClipboardProvider* provider)
     clipboard->history = clip_history_new();
     clipboard->enabled = TRUE;
     clipboard->current = NULL;
+    clipboard->trim_mode = DEFAULT_TRIM_MODE;
     return clipboard;
 }
 
@@ -48,19 +51,48 @@ void clip_clipboard_free(Clipboard* clipboard)
     if(clipboard == NULL){
         return;
     }
-
     clip_history_free(clipboard->history);
     clipboard->history = NULL;
-
     clip_clipboard_entry_free(clipboard->current);
     clipboard->current = NULL;
-
     clipboard->provider = NULL;
-
     g_free(clipboard);
 }
 
 
+char* clip_clipboard_clean(Clipboard* clipboard, char* text)
+{
+    if(text == NULL){
+        return NULL;
+    }
+
+    char *str = g_strdup(text);
+    switch(clipboard->trim_mode) {
+        case TRIM_CHOMP:
+            g_strchomp(str);
+            break;
+        case TRIM_CHUG:
+            g_strchug(str);
+            break;
+        case TRIM_STRIP:
+            g_strstrip(str);
+            break;
+        case TRIM_OFF:
+        case TRIM_STOP:
+            break;
+    }
+    return str;
+}
+
+static gboolean clip_clipboard_different(char* new, char* old)
+{
+    char *stripped_new = g_strstrip(g_strdup(new));
+    char *stripped_old = g_strstrip(g_strdup(old));
+    gboolean different = g_strcmp0(stripped_old, stripped_new);
+    g_free(stripped_old);
+    g_free(stripped_new);
+    return different;
+}
 
 /**
  * Sets the clipboard's current value to a copy of the specified text. If text is NULL, the current clipboard value,
@@ -68,32 +100,52 @@ void clip_clipboard_free(Clipboard* clipboard)
  */
 void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry)
 {
-    char* text = clip_clipboard_entry_get_text(entry);
-    debug("Setting new active clipboard value, \"%.*s...\".\n", 30, text);
+    char *new = clip_clipboard_entry_get_text(entry);
+    char *clean_new = clip_clipboard_clean(clipboard, new);
 
-    // If the active value is the same, just return.
-    if(clipboard->current != NULL){
-        char* current = clip_clipboard_entry_get_text(clipboard->current);
-        if(!g_strcmp0(current, text)){
-            trace("Clipboard's active text matches new text. Ignoring.\n");
-            return;
-        } 
+    char *current = clip_clipboard_entry_get_text(clipboard->current);
+    char *clean_current = clip_clipboard_clean(clipboard, current);
+
+    if(clean_new != NULL && strlen(clean_new) < 1){
+        debug("String is 0 characetrs long. Dropping and reverting current head.\n");
+        if(clean_current == NULL || strlen(clean_current) < 1){
+            clip_history_remove_head(clipboard->history);
+            ClipboardEntry *head = clip_history_get_head(clipboard->history);
+            if(head == NULL){
+                debug("No usable values.\n");
+            } else {
+                debug("Current value not usable. Resetting to previous head.\n");
+                clip_clipboard_set(clipboard, head);
+                clip_clipboard_entry_free(head);
+            }
+        } else {
+            clip_provider_set_current(clipboard->provider, clean_current);
+        }
+        goto exit;
+    } else if(clean_current != NULL && !clip_clipboard_different(clean_new, clean_current)){
+        // There isn't any need to archive this in history; it's the same value.
+        clip_provider_set_current(clipboard->provider, clean_current);
+        goto exit;
     }
 
-    clip_provider_set_current(clipboard->provider, text);
+    clip_provider_set_current(clipboard->provider, clean_new);
 
-    // Set the new value.
-    clip_clipboard_entry_free(clipboard->current);
+    ClipboardEntry *existing = clipboard->current;
     clipboard->current = clip_clipboard_entry_clone(entry);
+    clip_clipboard_entry_free(existing);
 
     if(clip_clipboard_is_enabled(clipboard)){
-        if(text == NULL){
+        if(new == NULL){
             debug("New clipboard contents are null (probably a request to clear the clipboard). Removing head.\n");
             clip_history_remove_head(clipboard->history);
         } else {
+            debug("Setting new active clipboard value, \"%.*s...\".\n", 30, new);
             clip_history_prepend(clipboard->history, clipboard->current);
         }
     }
+exit:
+    g_free(clean_current);
+    g_free(clean_new);
 }
 
 /**
@@ -103,6 +155,24 @@ ClipboardEntry* clip_clipboard_get(Clipboard* clipboard)
 {
     return clip_clipboard_entry_clone(clipboard->current);
 }
+
+
+
+TrimMode clip_clipboard_next_trim_mode(Clipboard* clipboard)
+{
+    clipboard->trim_mode++;
+    if(clipboard->trim_mode >= TRIM_STOP){
+        clipboard->trim_mode = TRIM_OFF;
+    }
+    return clipboard->trim_mode;
+}
+
+TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard)
+{
+    return clipboard->trim_mode;
+}
+
+
 
 
 void clip_clipboard_remove(Clipboard* clipboard, ClipboardEntry* entry)

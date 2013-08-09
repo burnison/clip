@@ -25,11 +25,7 @@
  */
 #define DAEMON_REFRESH_INTERVAL 500
 
-/* 
- * Changing this to 0 will disable trimming, however, it will also result in the
- * current PRIMARY clipboard to become unselected.
- */
-#define PROVIDER_TRIM 1
+#define DEFAULT_TRIM_MODE TRIM_CHOMP
 
 /**
  * The maximum number of elements to retain in the history.
@@ -59,9 +55,8 @@
 #define GUI_HISTORY_ENABLE_MESSAGE "Enable _History"
 #define GUI_HISTORY_DISABLE_MESSAGE "Disable _History"
 #define GUI_DEBUG_EXIT_MESSAGE "E_xit"
+#define GUI_AUTO_TRIM_MESSAGE "_Auto Trim"
 
-#define LOG_TRACE 1
+#define LOG_TRACE 0
 #define LOG_DEBUG 1
 #define LOG_WARN 1
-
-#define DEBUG 1

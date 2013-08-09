@@ -34,4 +34,5 @@ void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry);
 void clip_history_clear(ClipboardHistory* history);
 
 GList* clip_history_get_list(ClipboardHistory* history);
+ClipboardEntry* clip_history_get_head(ClipboardHistory* history);
 void clip_history_free_list(GList* list);

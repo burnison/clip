@@ -37,6 +37,7 @@ static GtkWidget* menu_item_clear;
 static GtkWidget* menu_item_history;
 static GtkWidget* menu_item_empty;
 static GtkWidget* menu_item_edit;
+static GtkWidget* menu_item_trim;
 
 static GList* history;
 
@@ -105,6 +106,17 @@ static void clip_gui_update_menu_text(void)
         ? GUI_HISTORY_DISABLE_MESSAGE
         : GUI_HISTORY_ENABLE_MESSAGE;
     clip_gui_set_normal_label(GTK_BIN(menu_item_history), history_text);
+
+
+    char* mode_name = GUI_AUTO_TRIM_MESSAGE;
+    switch(clip_clipboard_get_trim_mode(clipboard)){
+        case TRIM_OFF:
+        case TRIM_STOP:  mode_name = GUI_AUTO_TRIM_MESSAGE " (Off)"; break;
+        case TRIM_CHOMP: mode_name = GUI_AUTO_TRIM_MESSAGE " (Trim Right)"; break;
+        case TRIM_CHUG:  mode_name = GUI_AUTO_TRIM_MESSAGE " (Trim Left)"; break;
+        case TRIM_STRIP: mode_name = GUI_AUTO_TRIM_MESSAGE " (Trim Both)"; break;
+    }
+    clip_gui_set_normal_label(GTK_BIN(menu_item_trim), mode_name);
 }
 
 
@@ -117,7 +129,9 @@ static gboolean clip_gui_is_selectable(GtkWidget* widget)
         && widget != gtk_bin_get_child(GTK_BIN(menu_item_clear))
         && widget != gtk_bin_get_child(GTK_BIN(menu_item_edit))
         && widget != gtk_bin_get_child(GTK_BIN(menu_item_history))
-        && widget != gtk_bin_get_child(GTK_BIN(menu_item_empty));
+        && widget != gtk_bin_get_child(GTK_BIN(menu_item_empty))
+        && widget != gtk_bin_get_child(GTK_BIN(menu_item_trim))
+    ;
 }
 
 
@@ -393,6 +407,17 @@ static void clip_gui_cb_edit(GtkWidget* item, gpointer data)
     clip_clipboard_entry_free(current_entry);
 }
 
+static void clip_gui_cb_trim(GtkWidget* item, gpointer data)
+{
+    clip_clipboard_next_trim_mode(clipboard);
+
+    // Force a reset to pick up the new trimmed version.
+    ClipboardEntry* current_entry = clip_clipboard_get(clipboard);
+    clip_clipboard_set(clipboard, current_entry);
+    clip_clipboard_entry_free(current_entry);
+
+    clip_gui_update_menu_text();
+}
 
 static void clip_gui_entry_add(ClipboardEntry* entry)
 {
@@ -435,6 +460,7 @@ static void clip_gui_prepare_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_history);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_clear);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_edit);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_trim);
 
 #ifdef DEBUG
     GtkWidget* menu_item_exit = gtk_menu_item_new_with_mnemonic(GUI_DEBUG_EXIT_MESSAGE);
@@ -491,6 +517,11 @@ void clip_gui_init(Clipboard* _clipboard)
     menu_item_edit = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_EDIT_MESSAGE));
     g_signal_connect(G_OBJECT(menu_item_edit), "activate", G_CALLBACK(clip_gui_cb_edit), NULL);
 
+    menu_item_trim = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_AUTO_TRIM_MESSAGE));
+    g_signal_connect(G_OBJECT(menu_item_trim), "activate", G_CALLBACK(clip_gui_cb_trim), NULL);
+
+
+
     keybinder_init();
     keybinder_bind(GUI_GLOBAL_KEY, clip_gui_cb_hotkey_handler, NULL);
 }
@@ -521,6 +552,14 @@ void clip_gui_destroy(void)
     g_object_unref(menu_item_clear);
     gtk_widget_destroy(menu_item_clear);
     menu_item_clear = NULL;
+
+    g_object_unref(menu_item_edit);
+    gtk_widget_destroy(menu_item_edit);
+    menu_item_edit = NULL;
+
+    g_object_unref(menu_item_trim);
+    gtk_widget_destroy(menu_item_trim);
+    menu_item_trim = NULL;
 
     gtk_widget_destroy(menu);
     menu = NULL;

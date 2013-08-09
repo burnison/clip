@@ -141,19 +141,7 @@ static char* clip_provider_prepare_value(ClipboardProvider* provider, char* text
             return g_strdup(provider->current);
         }
     }
-
-    char* copy = g_strdup(text);
-
-    if(copy != NULL && PROVIDER_TRIM){
-        g_strchomp(copy);
-        if(strlen(copy) < 1){
-            debug("Trimmed string is 0 characetrs long. Dropping and reverting current head.\n");
-            g_free(copy);
-            return g_strdup(provider->current);
-        }
-    }
-
-    return copy;
+    return g_strdup(text);
 }
 
 /**
@@ -174,8 +162,9 @@ void clip_provider_set_current(ClipboardProvider* provider, char* text)
 	clip_provider_set_if_different(provider->primary, copy);
     clip_provider_unlock(provider);
 
-    g_free(provider->current);
+    char* old = provider->current;
     provider->current = copy;
+    g_free(old);
 }
 
 void clip_provider_clear(ClipboardProvider* provider)

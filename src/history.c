@@ -34,7 +34,11 @@
                                "    locked TIMESTAMP"\
                                ")"
 // The usage count will be 0 when null (i.e. no value).
-#define HISTORY_INSERT_HISTORY "INSERT INTO history(text, created, locked, usage_count) VALUES(?1, current_timestamp, NULL, 0)"
+#define HISTORY_INSERT_HISTORY "INSERT OR REPLACE INTO history(id, text, created, locked, usage_count) VALUES( "\
+                               "(SELECT id FROM history WHERE text = ?1), "\
+                               "?1, current_timestamp, "\
+                               "(SELECT locked FROM history WHERE text = ?1), "\
+                               "(SELECT usage_count + 1 FROM history WHERE text = ?1))"
 #define HISTORY_UPDATE_HISTORY "UPDATE history SET text = ?1, created = current_timestamp WHERE id = ?2"
 
 #define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE id = ? AND locked IS NULL"
@@ -138,14 +142,13 @@ static void clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* 
     int status = sqlite3_prepare(history->storage, HISTORY_INSERT_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
-        if(sqlite3_step(statement) == SQLITE_DONE){
+        if((status = sqlite3_step(statement)) == SQLITE_DONE){
             int64_t id = sqlite3_last_insert_rowid(history->storage);
             clip_clipboard_entry_set_id(entry, id);
             debug("Created new history entry, %ld.\n", id);
         } else {
             warn("Couldn't prepend new entry (error %d).\n", status);
         }
-
     } else {
         warn("Couldn't prepare entry prepend (error %d).\n", status);
     }
@@ -163,7 +166,7 @@ static void clip_history_prepend_existing(ClipboardHistory* history, ClipboardEn
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
         sqlite3_bind_int64(statement, 2, id);
-        if(sqlite3_step(statement) != SQLITE_DONE){
+        if((status = sqlite3_step(statement)) != SQLITE_DONE){
             warn("Couldn't prepend existing entry, %ld (error %d).\n", id, status);
         }
     } else {
@@ -214,9 +217,22 @@ void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
     sqlite3_finalize(statement);
 }
 
-/**
- * Removes the head entry from the history.
- */
+
+ClipboardEntry* clip_history_get_head(ClipboardHistory* history)
+{
+    ClipboardEntry *head = NULL;
+    GList *list = clip_history_get_list(history);
+    if(list == NULL){
+        goto exit;
+    }
+
+    head = clip_clipboard_entry_clone(g_list_first(list)->data);
+
+exit:
+    clip_history_free_list(list);
+    return head;
+}
+
 void clip_history_remove_head(ClipboardHistory* history)
 {
     int status = sqlite3_exec(history->storage, HISTORY_REMOVE_NEWEST_UNLOCKED, NULL, NULL, NULL);

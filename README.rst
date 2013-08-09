@@ -84,12 +84,19 @@ When Clip receives a request to clear the active clipboard, it will remove the c
 intended to realize expectations about privacy, such as those made by password stores like Keepassx. This feature may
 have otherwise unwanted outcomes if third-party applications frequently clear the clipboard.
 
-Whitespace Trimming
--------------------
+Dynamic Whitespace Trimming
+---------------------------
 
-When enabled at compile time, Clip will trim whitespaces off the end of any values copied to the clipboard. Keep in mind
-that when enabled, this feature may result in the primary clipboard selection to become unselected in some applications
-(such as rxvt).
+At runtime, Clip is able to use one of four whitespace trimming strategies:
+
+* Off - No trimming is performed.
+* Left - Whitespace is trimmed from the left of each clipboard entry.
+* Right - Whitespace is trimmed from the right side of each clipboard entry.
+* Both - Whitespace is trimmed from both sides of each clipboard entry.
+
+These strategies may be changed by selecting the "Trim" menu item, which indicates its active mode. This feature is 
+non-destructive and will not change the source data. Keep in mind that when enabled, this feature may result in the
+primary clipboard selection to become unselected in some applications (such as rxvt).
 
 
 
