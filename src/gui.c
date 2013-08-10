@@ -65,7 +65,6 @@ static Data* clip_gui_get_selected_data(void)
     return clip_gui_get_data(selected_item);
 }
 
-
 /**
  * Sets a label's text.
  */
@@ -145,6 +144,14 @@ static void clip_gui_update_menu_text(void)
     clip_gui_set_normal_label(GTK_BIN(menu_item_trim), mode_name);
 }
 
+static void clip_gui_refresh(void)
+{
+    ClipboardEntry* current_entry = clip_clipboard_get_head(clipboard);
+    clip_clipboard_set(clipboard, current_entry);
+    clip_clipboard_entry_free(current_entry);
+
+    clip_gui_update_menu_text();
+}
 
 
 
@@ -163,7 +170,7 @@ static gboolean clip_gui_is_selectable(GtkWidget* widget)
 /**
  * Remove the specified menu item.
  */
-static void clip_gui_remove(GtkWidget* menu_item)
+static void clip_gui_remove_widget(GtkWidget* menu_item)
 {
     Data *data = clip_gui_get_data(menu_item);
     if(data != NULL){
@@ -192,8 +199,7 @@ static void clip_gui_remove_selected(void)
     }
 
     clip_clipboard_remove(clipboard, entry);
-    clip_gui_remove(selected_item);
-
+    clip_gui_remove_widget(selected_item);
 }
 
 /**
@@ -263,6 +269,7 @@ static void clip_gui_edit(gboolean promote)
         } else {
             clip_clipboard_replace(clipboard, current_entry);
         }
+        clip_gui_refresh();
     } else {
         debug("Edited text is unchanged. Ignoring edit request.\n");
     }
@@ -288,7 +295,7 @@ static void clip_gui_join(void)
     GList *selected_child = g_list_find(children, selected_item);
     GList *next_child = g_list_next(selected_child);
 
-    clip_gui_remove(next_child->data);
+    clip_gui_remove_widget(next_child->data);
     clip_gui_set_entry_text(selected_item);
 
     g_list_free(children);
@@ -469,19 +476,13 @@ static void clip_gui_cb_hotkey_handler(const char* keystring, gpointer user_data
  */
 static void clip_gui_cb_remove_menu_item(GtkWidget* item, gpointer user_data)
 {
-    clip_gui_remove(item);
+    clip_gui_remove_widget(item);
 }
 
-static void clip_gui_cb_trim(GtkWidget* item, Data *data)
+static void clip_gui_cb_trim(GtkWidget* item, gpointer user_data)
 {
     clip_clipboard_next_trim_mode(clipboard);
-
-    // Force a reset to pick up the new trimmed version.
-    ClipboardEntry* current_entry = clip_clipboard_get(clipboard);
-    clip_clipboard_set(clipboard, current_entry);
-    clip_clipboard_entry_free(current_entry);
-
-    clip_gui_update_menu_text();
+    clip_gui_refresh();
 }
 
 static void clip_gui_entry_add(ClipboardEntry* entry, int *row)
@@ -585,6 +586,8 @@ void clip_gui_init(Clipboard* _clipboard)
 
     keybinder_init();
     keybinder_bind(GUI_GLOBAL_KEY, clip_gui_cb_hotkey_handler, NULL);
+
+    clip_gui_refresh();
 }
 
 void clip_gui_destroy(void)

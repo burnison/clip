@@ -39,6 +39,11 @@ void clip_clipboard_free(Clipboard* clipboard);
  */
 ClipboardEntry* clip_clipboard_get(Clipboard* clipboard);
 /**
+ * Gets a copy of the clipboard's inactive contents. This copy must be
+ * freed whe no longer in use.
+ */
+ClipboardEntry* clip_clipboard_get_head(Clipboard* clipboard);
+/**
  * Identifies if the specified entry is the current entry of the clipboard.
  */
 gboolean clip_clipboard_is_head(Clipboard* clipboard, ClipboardEntry* entry);

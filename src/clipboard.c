@@ -199,6 +199,11 @@ ClipboardEntry* clip_clipboard_get(Clipboard* clipboard)
     return clip_clipboard_entry_clone(clipboard->current);
 }
 
+ClipboardEntry* clip_clipboard_get_head(Clipboard* clipboard)
+{
+    return clip_history_get_head(clipboard->history);;
+}
+
 gboolean clip_clipboard_is_head(Clipboard* clipboard, ClipboardEntry* entry)
 {
 	return clip_clipboard_entry_equals(entry, clipboard->current);
