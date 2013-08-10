@@ -146,7 +146,7 @@ static void clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* 
         if((status = sqlite3_step(statement)) == SQLITE_DONE){
             int64_t id = sqlite3_last_insert_rowid(history->storage);
             clip_clipboard_entry_set_id(entry, id);
-            debug("Created new history entry, %lld.\n", id);
+            debug("Created new history entry, %"PRIu64".\n", id);
         } else {
             warn("Couldn't prepend new entry (error %d).\n", status);
         }
@@ -162,16 +162,16 @@ static void clip_history_prepend_existing(ClipboardHistory* history, ClipboardEn
     int64_t id = clip_clipboard_entry_get_id(entry);
     char* text = clip_clipboard_entry_get_text(entry);
 
-    trace("Promoting existing entry, %lld, to top.\n", id);
+    trace("Promoting existing entry, %"PRIu64", to top.\n", id);
     int status = sqlite3_prepare(history->storage, HISTORY_INSERT_EXISTING_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
         sqlite3_bind_int64(statement, 2, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
-            warn("Couldn't prepend existing entry, %lld (error %d).\n", id, status);
+            warn("Couldn't prepend existing entry, %"PRIu64" (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare entry prepend for %lld (error %d).\n", id, status);
+        warn("Couldn't prepare entry prepend for %"PRIu64" (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }
@@ -202,16 +202,16 @@ void clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
     int64_t id = clip_clipboard_entry_get_id(entry);
     char* text = clip_clipboard_entry_get_text(entry);
 
-    trace("Updating existing entry, %lld.\n", id);
+    trace("Updating existing entry, %"PRIu64".\n", id);
     int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
         sqlite3_bind_int64(statement, 2, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
-            warn("Couldn't update entry, %lld (error %d).\n", id, status);
+            warn("Couldn't update entry, %"PRIu64" (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare entry update for %lld (error %d).\n", id, status);
+        warn("Couldn't prepare entry update for %"PRIu64" (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }
@@ -225,17 +225,17 @@ void clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
 void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
 {
     int64_t id = clip_clipboard_entry_get_id(entry);
-    trace("Removing clipboard entry %lld.\n", id);
+    trace("Removing clipboard entry %"PRIu64".\n", id);
 
     sqlite3_stmt* statement = NULL;
     int status = sqlite3_prepare(history->storage, HISTORY_DELETE_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_int64(statement, 1, id);
         if(sqlite3_step(statement) != SQLITE_DONE){
-            warn("Couldn't remove entry, %lld (error %d).\n", id, status);
+            warn("Couldn't remove entry, %"PRIu64" (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare entry removal query for %lld (error %d).\n", id, status);
+        warn("Couldn't prepare entry removal query for %"PRIu64" (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }
@@ -268,17 +268,17 @@ void clip_history_remove_head(ClipboardHistory* history)
 void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry)
 {
     int64_t id = clip_clipboard_entry_get_id(entry);
-    trace("Toggling entry lock for %lld.\n", id);
+    trace("Toggling entry lock for %"PRIu64".\n", id);
 
     sqlite3_stmt* statement = NULL;
     int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_TOGGLE_LOCK, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_int64(statement, 1, id);
         if(sqlite3_step(statement) != SQLITE_DONE){
-            warn("Couldn't toggle lock for %lld (error %d).\n", id, status);
+            warn("Couldn't toggle lock for %"PRIu64" (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare lock toggle query for %lld (error %d).\n", id, status);
+        warn("Couldn't prepare lock toggle query for %"PRIu64" (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }
@@ -307,7 +307,7 @@ GList* clip_history_get_list(ClipboardHistory* history)
             int64_t id = sqlite3_column_int64(statement, 0);
             char* text = (char*)sqlite3_column_text(statement, 1);
             char* locked = (char*)sqlite3_column_text(statement, 2);
-            unsigned int count = sqlite3_column_int64(statement, 3);
+            int count = sqlite3_column_int(statement, 3);
             ClipboardEntry* entry = clip_clipboard_entry_new(id, text, locked != NULL, count);
             list = g_list_prepend(list, entry);
         }

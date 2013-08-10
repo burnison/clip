@@ -28,8 +28,8 @@ void clip_clipboard_entry_free(ClipboardEntry* entry);
 
 gboolean clip_clipboard_entry_is_new(ClipboardEntry* entry);
 
-int64_t clip_clipboard_entry_get_id(ClipboardEntry* entry);
-void clip_clipboard_entry_set_id(ClipboardEntry* entry, int64_t id);
+uint64_t clip_clipboard_entry_get_id(ClipboardEntry* entry);
+void clip_clipboard_entry_set_id(ClipboardEntry* entry, uint64_t id);
 
 /**
  * Return a pointer to the entry's text.

@@ -21,7 +21,7 @@
 
 
 struct clipboard_entry {
-    int64_t id;
+    uint64_t id;
     char* text;
     gboolean locked;
     unsigned int count;
@@ -80,7 +80,7 @@ void clip_clipboard_entry_set_text(ClipboardEntry* entry, char* text)
     g_free(old_text);
 }
 
-int64_t clip_clipboard_entry_get_id(ClipboardEntry* entry)
+uint64_t clip_clipboard_entry_get_id(ClipboardEntry* entry)
 {
     if(entry == NULL){
         return 0;
@@ -88,7 +88,7 @@ int64_t clip_clipboard_entry_get_id(ClipboardEntry* entry)
     return entry->id;
 }
 
-void clip_clipboard_entry_set_id(ClipboardEntry* entry, int64_t id)
+void clip_clipboard_entry_set_id(ClipboardEntry* entry, uint64_t id)
 {
     entry->id = id;
 }
