@@ -46,10 +46,12 @@ typedef struct {
 } Data;
 
 
+
 static GtkWidget* clip_gui_get_selected_item(void)
 {
     return gtk_menu_shell_get_selected_item(GTK_MENU_SHELL(menu));
 }
+
 
 static Data* clip_gui_get_data(GtkWidget *menu_item)
 {
@@ -59,11 +61,16 @@ static Data* clip_gui_get_data(GtkWidget *menu_item)
     return g_object_get_data(G_OBJECT(menu_item), "data");
 }
 
-static Data* clip_gui_get_selected_data(void)
+static ClipboardEntry* clip_gui_get_entry(GtkWidget *menu_item)
 {
-    GtkWidget *selected_item = clip_gui_get_selected_item();
-    return clip_gui_get_data(selected_item);
+    Data *data = clip_gui_get_data(menu_item);
+    if(data == NULL){
+        return NULL;
+    }
+    return data->entry;
 }
+
+
 
 /**
  * Sets a label's text.
@@ -184,7 +191,7 @@ static void clip_gui_remove_widget(GtkWidget* menu_item)
 /**
  * Remove the currently selected men item.
  */
-static void clip_gui_remove_selected(void)
+static void clip_gui_remove(GtkWidget *menu_item)
 {
     GtkWidget *selected_item = clip_gui_get_selected_item();
     if(selected_item == NULL){
@@ -192,7 +199,7 @@ static void clip_gui_remove_selected(void)
         return;
     }
     
-    ClipboardEntry* entry = clip_gui_get_data(selected_item)->entry;
+    ClipboardEntry* entry = clip_gui_get_entry(selected_item);
     if(clip_clipboard_entry_get_locked(entry)){
         debug("Refusing to delete locked item.\n");
         return;
@@ -200,6 +207,7 @@ static void clip_gui_remove_selected(void)
 
     clip_clipboard_remove(clipboard, entry);
     clip_gui_remove_widget(selected_item);
+    clip_gui_refresh();
 }
 
 /**
@@ -239,35 +247,36 @@ static void clip_gui_select_index(unsigned int index)
     }
 }
 
-static void clip_gui_edit(gboolean promote)
+static void clip_gui_lock(GtkWidget *selected_menu_item, ClipboardEntry *selected_entry)
+{
+    clip_clipboard_toggle_lock(clipboard, selected_entry);
+    clip_gui_set_entry_text(selected_menu_item);
+}
+
+static void clip_gui_edit(ClipboardEntry *selected_entry, gboolean promote)
 {
     if(!clip_clipboard_is_enabled(clipboard)){
         trace("Clipboard is disabled.\n");
         return;
-    }
-
-    trace("Editing current value.\n");
-
-    Data *data = clip_gui_get_selected_data();
-    if(data == NULL){
+    } else if(selected_entry == NULL){
         trace("Tried to edit with no item selected.\n");
         return;
     }
 
+    trace("Editing current value.\n");
     gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
 
-    ClipboardEntry *current_entry = data->entry;
     clip_clipboard_disable_history(clipboard);
-    char* current = clip_clipboard_entry_get_text(current_entry);
+    char* current = clip_clipboard_entry_get_text(selected_entry);
     char* edited = clip_gui_editor_edit_text(current);
     clip_clipboard_enable_history(clipboard);
 
     if(edited != NULL){
-        clip_clipboard_entry_set_text(current_entry, edited);
+        clip_clipboard_entry_set_text(selected_entry, edited);
         if(promote){
-            clip_clipboard_set(clipboard, current_entry);
+            clip_clipboard_set(clipboard, selected_entry);
         } else {
-            clip_clipboard_replace(clipboard, current_entry);
+            clip_clipboard_replace(clipboard, selected_entry);
         }
         clip_gui_refresh();
     } else {
@@ -277,26 +286,24 @@ static void clip_gui_edit(gboolean promote)
     clip_gui_editor_free_text(edited);
 }
 
-static void clip_gui_join(void)
+static void clip_gui_join(GtkWidget *selected_menu_item, ClipboardEntry *selected_entry)
 {
-    GtkWidget *selected_item = clip_gui_get_selected_item(); 
-    if(selected_item == NULL){
+    if(selected_menu_item == NULL){
         trace("Tried to join with no item selected.\n");
         return;
     }
 
-    Data *data = clip_gui_get_data(selected_item);
-    gboolean joined = clip_clipboard_join(clipboard, data->entry);
+    gboolean joined = clip_clipboard_join(clipboard, selected_entry);
     if(!joined) {
         return;
     }
 
     GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
-    GList *selected_child = g_list_find(children, selected_item);
+    GList *selected_child = g_list_find(children, selected_menu_item);
     GList *next_child = g_list_next(selected_child);
 
     clip_gui_remove_widget(next_child->data);
-    clip_gui_set_entry_text(selected_item);
+    clip_gui_set_entry_text(selected_menu_item);
 
     g_list_free(children);
 }
@@ -361,6 +368,10 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
 {
     guint keyval = ((GdkEventKey*)event)->keyval;
     gboolean update_required = TRUE;
+
+    GtkWidget *selected_menu_item = clip_gui_get_selected_item();
+    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
+
     if(!clip_gui_search_in_progress()){
         switch(keyval){
             case GUI_SEARCH_LEADER:
@@ -368,8 +379,8 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
                 break;
             case GDK_KEY_d:
             case GDK_KEY_Delete:
-                clip_gui_remove_selected();
-                update_required = FALSE;
+                clip_gui_remove(selected_menu_item);
+                update_required = TRUE;
                 break;
             case GDK_KEY_0: case GDK_KEY_1: case GDK_KEY_2: case GDK_KEY_3: case GDK_KEY_4:
             case GDK_KEY_5: case GDK_KEY_6: case GDK_KEY_7: case GDK_KEY_8: case GDK_KEY_9:
@@ -378,12 +389,15 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
                 break;
             case GDK_KEY_e:
             case GDK_KEY_E:
-                clip_gui_edit(keyval == GDK_KEY_E);
+                clip_gui_edit(selected_entry, keyval == GDK_KEY_E);
                 update_required = FALSE;
                 break;
             case GDK_KEY_J:
-                clip_gui_join();
+                clip_gui_join(selected_menu_item, selected_entry);
                 update_required = FALSE;
+                break;
+            case GDK_KEY_l:
+                clip_gui_lock(selected_menu_item, selected_entry);
                 break;
             default:
                 break;
@@ -423,14 +437,11 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
     return clip_gui_search_in_progress();
 }
 
-
-
-static gboolean clip_gui_cb_toggle_lock(GtkWidget* widget, GdkEvent* event, Data *data)
+static gboolean clip_gui_cb_toggle_lock(GtkWidget *widget, GdkEvent *event, Data *data)
 {
     // Only handle right button press.
     if(((GdkEventButton*)event)->button == 3) {
-        clip_clipboard_toggle_lock(clipboard, data->entry);
-        clip_gui_set_entry_text(widget);
+        clip_gui_lock(widget, data->entry);
         return TRUE;
     }
     return FALSE;
