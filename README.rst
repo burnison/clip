@@ -56,21 +56,22 @@ item will set it as active.
 Positional Selection
 --------------------
 
-When pressing 1-9, the nth menu item will be selected. This behaviour is unavailable when searching and is intended
+When pressing 0-9, the nth menu item will be selected. This behaviour is unavailable when searching and is intended
 for quick access when the actual position is already known.
 
 Deleting Individual History Items
 ---------------------------------
 
 Clip provides the ability to delete individual history items. To delete a single history item, change the menu selection
-to the item to be deleted. Press the Delete key on your keyboard. If unlocked, the item will be removed from the
-history.
+to the item to be deleted. Press the "Delete" or "d" keys on your keyboard. If unlocked, the item will be removed from
+the history.
 
-Editing Current Value
----------------------
+Editing Values
+--------------
 
-Clip allows you to edit the current value of the clip board by selecting the "Edit" menu item. This will pop-up a dialog
-in which you can make any changes. Pressing OK will replace the current value with the changes you have made.
+Clip allows you to edit the value of a selected entry by pressing "e" or "E". This will pop-up a dialog in which you can
+make any changes to the desired string. While "e" only provides a way to edit the selected entry, pressing "E" will
+additionally promote the edited value to the active clipboard value.
 
 Record Joining
 --------------
@@ -103,7 +104,7 @@ At runtime, Clip is able to use one of four whitespace trimming strategies:
 * Right - Whitespace is trimmed from the right side of each clipboard entry.
 * Both - Whitespace is trimmed from both sides of each clipboard entry.
 
-These strategies may be changed by selecting the "Trim" menu item, which indicates its active mode. This feature is 
+These strategies may be changed by selecting the "Trim" menu item, which indicates its active mode. This feature is
 non-destructive and will not change the source data. Keep in mind that when enabled, this feature may result in the
 primary clipboard selection to become unselected in some applications (such as rxvt).
 
@@ -113,8 +114,8 @@ Known Issues
 ============
 
 * When using a window manager with "sloppy focus", you may need to set an environmental variable,
-  GDK_CORE_DEVICE_EVENTS=1, when running Clip. This seems to be an upstream bug in GTK3 that prevents
-  the pop-up dialog from rendering.
+  GDK_CORE_DEVICE_EVENTS=1, when running Clip. This seems to be an upstream bug in GTK3 that prevents the pop-up dialog
+  from rendering.
 
 * Clip interacts oddly with applications that do not use text-based clipboard contents (such as InkScape and
   LibreOffice). If you do not like how these programs interact, you can temporarily disable Clip's history.

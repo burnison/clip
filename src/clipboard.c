@@ -83,6 +83,19 @@ char* clip_clipboard_clean(Clipboard* clipboard, char* text)
     return str;
 }
 
+
+/**
+ * Comparator for GLib collections.
+ */
+static gboolean clip_clipboard_compare_entries(ClipboardEntry *a, ClipboardEntry *b)
+{
+    return !clip_clipboard_entry_equals(a, b);
+}
+
+/**
+ * Identifies if the two values differ in a meaningful way, regardless of 
+ * left or right padding.
+ */
 static gboolean clip_clipboard_different(char* new, char* old)
 {
     char *stripped_new = g_strstrip(g_strdup(new));
@@ -152,29 +165,30 @@ exit:
 
 
 
-
-void clip_clipboard_join(Clipboard* clipboard, ClipboardEntry* left)
+gboolean clip_clipboard_join(Clipboard* clipboard, ClipboardEntry* left)
 {
+    gboolean changed = FALSE;
     GList *list = clip_history_get_list(clipboard->history);
-    gboolean compare(ClipboardEntry* a, ClipboardEntry* b) { return !clip_clipboard_entry_equals(a, b); };
-    GList *first = g_list_find_custom(list, left, (GCompareFunc)compare);
-    if(list == NULL || g_list_length(list) < 2){
-        debug("Not enough entries to join.");
+    GList *first = g_list_find_custom(list, left, (GCompareFunc)clip_clipboard_compare_entries);
+    GList *next = g_list_next(first);
+    if(first == NULL || next == NULL){
+        debug("Not enough entries to join.\n");
         goto exit;
     }
 
-    ClipboardEntry* right = g_list_next(first)->data;
-
+    ClipboardEntry *right = next->data;
     GString *joined_text = g_string_new(clip_clipboard_entry_get_text(left));
     g_string_append_printf(joined_text, " %s", clip_clipboard_entry_get_text(right));
     clip_clipboard_entry_set_text(left, joined_text->str);
     g_string_free(joined_text, TRUE);
 
-    clip_history_remove(clipboard->history, right);
-    clip_history_update(clipboard->history, left);
+    clip_clipboard_remove(clipboard, right);
+    clip_clipboard_replace(clipboard, left);
+    changed = TRUE;
 
 exit:
     clip_history_free_list(list);
+    return changed;
 }
 
 
@@ -208,11 +222,17 @@ TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard)
 
 
 
+void clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry)
+{
+    clip_history_update(clipboard->history, entry);
+}
 
-void clip_clipboard_remove(Clipboard* clipboard, ClipboardEntry* entry)
+void clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry)
 {
     clip_history_remove(clipboard->history, entry);
 }
+
+
 
 void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry)
 {
