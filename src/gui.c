@@ -247,25 +247,28 @@ static void clip_gui_select_index(unsigned int index)
     }
 }
 
-static void clip_gui_lock(GtkWidget *selected_menu_item, ClipboardEntry *selected_entry)
+static void clip_gui_lock(GtkWidget *selected_menu_item)
 {
+    if(selected_menu_item == NULL){
+        trace("Tried to lock with no item selected.\n");
+        return;
+    }
+    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
     clip_clipboard_toggle_lock(clipboard, selected_entry);
     clip_gui_set_entry_text(selected_menu_item);
 }
 
-static void clip_gui_edit(ClipboardEntry *selected_entry, gboolean promote)
+static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
 {
-    if(!clip_clipboard_is_enabled(clipboard)){
-        trace("Clipboard is disabled.\n");
-        return;
-    } else if(selected_entry == NULL){
-        trace("Tried to edit with no item selected.\n");
+    if(!clip_clipboard_is_enabled(clipboard) || selected_menu_item == NULL){
+        trace("Clipboard is disabled or no item is selected.\n");
         return;
     }
 
     trace("Editing current value.\n");
     gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
 
+    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
     clip_clipboard_disable_history(clipboard);
     char* current = clip_clipboard_entry_get_text(selected_entry);
     char* edited = clip_gui_editor_edit_text(current);
@@ -286,13 +289,14 @@ static void clip_gui_edit(ClipboardEntry *selected_entry, gboolean promote)
     clip_gui_editor_free_text(edited);
 }
 
-static void clip_gui_join(GtkWidget *selected_menu_item, ClipboardEntry *selected_entry)
+static void clip_gui_join(GtkWidget *selected_menu_item)
 {
     if(selected_menu_item == NULL){
         trace("Tried to join with no item selected.\n");
         return;
     }
 
+    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
     gboolean joined = clip_clipboard_join(clipboard, selected_entry);
     if(!joined) {
         return;
@@ -370,8 +374,6 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
     gboolean update_required = TRUE;
 
     GtkWidget *selected_menu_item = clip_gui_get_selected_item();
-    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
-
     if(!clip_gui_search_in_progress()){
         switch(keyval){
             case GUI_SEARCH_LEADER:
@@ -380,7 +382,6 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
             case GDK_KEY_d:
             case GDK_KEY_Delete:
                 clip_gui_remove(selected_menu_item);
-                update_required = TRUE;
                 break;
             case GDK_KEY_0: case GDK_KEY_1: case GDK_KEY_2: case GDK_KEY_3: case GDK_KEY_4:
             case GDK_KEY_5: case GDK_KEY_6: case GDK_KEY_7: case GDK_KEY_8: case GDK_KEY_9:
@@ -389,15 +390,15 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
                 break;
             case GDK_KEY_e:
             case GDK_KEY_E:
-                clip_gui_edit(selected_entry, keyval == GDK_KEY_E);
+                clip_gui_edit(selected_menu_item, keyval == GDK_KEY_E);
                 update_required = FALSE;
                 break;
             case GDK_KEY_J:
-                clip_gui_join(selected_menu_item, selected_entry);
+                clip_gui_join(selected_menu_item);
                 update_required = FALSE;
                 break;
             case GDK_KEY_l:
-                clip_gui_lock(selected_menu_item, selected_entry);
+                clip_gui_lock(selected_menu_item);
                 break;
             default:
                 break;
@@ -428,8 +429,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
         clip_gui_search_select_match();
     }
 
-    if(update_required)
-    {
+    if(update_required) {
         clip_gui_update_menu_text();
     }
 
@@ -441,7 +441,7 @@ static gboolean clip_gui_cb_toggle_lock(GtkWidget *widget, GdkEvent *event, Data
 {
     // Only handle right button press.
     if(((GdkEventButton*)event)->button == 3) {
-        clip_gui_lock(widget, data->entry);
+        clip_gui_lock(widget);
         return TRUE;
     }
     return FALSE;
