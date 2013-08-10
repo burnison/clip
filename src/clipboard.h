@@ -56,6 +56,8 @@ void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry);
  */
 void clip_clipboard_set_new(Clipboard* clipboard, char* text);
 
+void clip_clipboard_join(Clipboard* clipboard, ClipboardEntry* left);
+
 
 void clip_clipboard_remove(Clipboard* clipboard, ClipboardEntry* entry);
 void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);

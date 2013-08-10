@@ -34,12 +34,13 @@
                                "    locked TIMESTAMP"\
                                ")"
 // The usage count will be 0 when null (i.e. no value).
-#define HISTORY_INSERT_HISTORY "INSERT OR REPLACE INTO history(id, text, created, locked, usage_count) VALUES( "\
+#define HISTORY_INSERT_NEW_HISTORY "INSERT OR REPLACE INTO history(id, text, created, locked, usage_count) VALUES( "\
                                "(SELECT id FROM history WHERE text = ?1), "\
                                "?1, current_timestamp, "\
                                "(SELECT locked FROM history WHERE text = ?1), "\
                                "(SELECT usage_count + 1 FROM history WHERE text = ?1))"
-#define HISTORY_UPDATE_HISTORY "UPDATE history SET text = ?1, created = current_timestamp WHERE id = ?2"
+#define HISTORY_INSERT_EXISTING_HISTORY "UPDATE history SET text = ?1, created = current_timestamp WHERE id = ?2"
+#define HISTORY_UPDATE_HISTORY "UPDATE history SET text = ?1 WHERE id = ?2"
 
 #define HISTORY_DELETE_HISTORY "DELETE FROM history WHERE id = ? AND locked IS NULL"
 #define HISTORY_TRUNCATE_HISTORY "DELETE FROM history WHERE locked IS NULL"
@@ -139,13 +140,13 @@ static void clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* 
     sqlite3_stmt* statement = NULL;
     char* text = clip_clipboard_entry_get_text(entry);
 
-    int status = sqlite3_prepare(history->storage, HISTORY_INSERT_HISTORY, -1, &statement, NULL);
+    int status = sqlite3_prepare(history->storage, HISTORY_INSERT_NEW_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
         if((status = sqlite3_step(statement)) == SQLITE_DONE){
             int64_t id = sqlite3_last_insert_rowid(history->storage);
             clip_clipboard_entry_set_id(entry, id);
-            debug("Created new history entry, %ld.\n", id);
+            debug("Created new history entry, %lld.\n", id);
         } else {
             warn("Couldn't prepend new entry (error %d).\n", status);
         }
@@ -161,20 +162,19 @@ static void clip_history_prepend_existing(ClipboardHistory* history, ClipboardEn
     int64_t id = clip_clipboard_entry_get_id(entry);
     char* text = clip_clipboard_entry_get_text(entry);
 
-    trace("Promoting existing entry, %ld, to top.\n", id);
-    int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_HISTORY, -1, &statement, NULL);
+    trace("Promoting existing entry, %lld, to top.\n", id);
+    int status = sqlite3_prepare(history->storage, HISTORY_INSERT_EXISTING_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
         sqlite3_bind_int64(statement, 2, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
-            warn("Couldn't prepend existing entry, %ld (error %d).\n", id, status);
+            warn("Couldn't prepend existing entry, %lld (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare entry prepend for %ld (error %d).\n", id, status);
+        warn("Couldn't prepare entry prepend for %lld (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }
-
 
 /**
  * Creates and returns a new history entry. Invokers are responsible for freeing it.
@@ -189,12 +189,35 @@ void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 
     // Reacquire the new count (an insert may have been a replace).
     clip_history_storage_count(history);
-
-    // There are more entries than allowable. Remove the tail.
     if(history->count > HISTORY_MAX_SIZE){
         clip_history_evict(history);
     }
 }
+
+
+
+void clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
+{
+    sqlite3_stmt* statement = NULL;
+    int64_t id = clip_clipboard_entry_get_id(entry);
+    char* text = clip_clipboard_entry_get_text(entry);
+
+    trace("Updating existing entry, %lld.\n", id);
+    int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_HISTORY, -1, &statement, NULL);
+    if(status == SQLITE_OK){
+        sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(statement, 2, id);
+        if((status = sqlite3_step(statement)) != SQLITE_DONE){
+            warn("Couldn't update entry, %lld (error %d).\n", id, status);
+        }
+    } else {
+        warn("Couldn't prepare entry update for %lld (error %d).\n", id, status);
+    }
+    sqlite3_finalize(statement);
+}
+
+
+
 
 /**
  * Removes the entry from the history. This function does not free the entry, just removes it from the backing store.
@@ -202,17 +225,17 @@ void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
 {
     int64_t id = clip_clipboard_entry_get_id(entry);
-    trace("Removing clipboard entry %ld.\n", id);
+    trace("Removing clipboard entry %lld.\n", id);
 
     sqlite3_stmt* statement = NULL;
     int status = sqlite3_prepare(history->storage, HISTORY_DELETE_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_int64(statement, 1, id);
         if(sqlite3_step(statement) != SQLITE_DONE){
-            warn("Couldn't remove entry, %ld (error %d).\n", id, status);
+            warn("Couldn't remove entry, %lld (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare entry removal query for %ld (error %d).\n", id, status);
+        warn("Couldn't prepare entry removal query for %lld (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }
@@ -245,17 +268,17 @@ void clip_history_remove_head(ClipboardHistory* history)
 void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry)
 {
     int64_t id = clip_clipboard_entry_get_id(entry);
-    trace("Toggling entry lock for %ld.\n", id);
+    trace("Toggling entry lock for %lld.\n", id);
 
     sqlite3_stmt* statement = NULL;
     int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_TOGGLE_LOCK, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_int64(statement, 1, id);
         if(sqlite3_step(statement) != SQLITE_DONE){
-            warn("Couldn't toggle lock for %ld (error %d).\n", id, status);
+            warn("Couldn't toggle lock for %lld (error %d).\n", id, status);
         }
     } else {
-        warn("Couldn't prepare lock toggle query for %ld (error %d).\n", id, status);
+        warn("Couldn't prepare lock toggle query for %lld (error %d).\n", id, status);
     }
     sqlite3_finalize(statement);
 }

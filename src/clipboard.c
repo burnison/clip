@@ -153,6 +153,33 @@ exit:
 
 
 
+void clip_clipboard_join(Clipboard* clipboard, ClipboardEntry* left)
+{
+    GList *list = clip_history_get_list(clipboard->history);
+    gboolean compare(ClipboardEntry* a, ClipboardEntry* b) { return !clip_clipboard_entry_equals(a, b); };
+    GList *first = g_list_find_custom(list, left, (GCompareFunc)compare);
+    if(list == NULL || g_list_length(list) < 2){
+        debug("Not enough entries to join.");
+        goto exit;
+    }
+
+    ClipboardEntry* right = g_list_next(first)->data;
+
+    GString *joined_text = g_string_new(clip_clipboard_entry_get_text(left));
+    g_string_append_printf(joined_text, " %s", clip_clipboard_entry_get_text(right));
+    clip_clipboard_entry_set_text(left, joined_text->str);
+    g_string_free(joined_text, TRUE);
+
+    clip_history_remove(clipboard->history, right);
+    clip_history_update(clipboard->history, left);
+
+exit:
+    clip_history_free_list(list);
+}
+
+
+
+
 ClipboardEntry* clip_clipboard_get(Clipboard* clipboard)
 {
     return clip_clipboard_entry_clone(clipboard->current);

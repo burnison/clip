@@ -72,6 +72,15 @@ Editing Current Value
 Clip allows you to edit the current value of the clip board by selecting the "Edit" menu item. This will pop-up a dialog
 in which you can make any changes. Pressing OK will replace the current value with the changes you have made.
 
+Record Joining
+--------------
+
+When a menu entry is currently selected, pressing 'J' will cause the top record to merge with the next record, similar
+to the join behaviour of Vi. Joining a row will not activate it, allowing multiple joins to be made in one trip to the
+dialog. Finally, the usage counter is inherited from the left-most entry as opposed to merging the counters. This was
+done to prevent entries from remaining around for too long.
+
+
 
 
 Features
