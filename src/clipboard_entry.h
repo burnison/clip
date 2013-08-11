@@ -46,3 +46,4 @@ gboolean clip_clipboard_entry_get_locked(ClipboardEntry *entry);
 void clip_clipboard_entry_set_locked(ClipboardEntry *entry, gboolean locked);
 
 gboolean clip_clipboard_entry_equals(ClipboardEntry *a, ClipboardEntry *b);
+gboolean clip_clipboard_entry_same(ClipboardEntry *a, ClipboardEntry *b);

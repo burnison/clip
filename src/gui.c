@@ -39,8 +39,6 @@ static GtkWidget *menu_item_history;
 static GtkWidget *menu_item_empty;
 static GtkWidget *menu_item_trim;
 
-static GList *history;
-
 typedef struct {
     ClipboardEntry *entry;
     int row;
@@ -69,6 +67,15 @@ static ClipboardEntry* clip_gui_get_entry(GtkWidget *menu_item)
         return NULL;
     }
     return data->entry;
+}
+
+static ClipboardEntry* clip_gui_get_entry_copy(GtkWidget *menu_item)
+{
+    ClipboardEntry *entry = clip_gui_get_entry(menu_item);
+    if(entry == NULL){
+        return NULL;
+    }
+    return clip_clipboard_entry_clone(entry);
 }
 
 
@@ -119,6 +126,11 @@ static void clip_gui_set_markedup_label(GtkBin *item, char *format, char *text)
 static void clip_gui_update_entry_text(GtkWidget *menu_item)
 {
     Data *data = clip_gui_get_data(menu_item);
+    if(data == NULL){
+        warn("Got an update action for a missing entry.\n");
+        return;
+    }
+
     char *text = clip_clipboard_entry_get_text(data->entry);
     char *shortened = g_strndup(text, GUI_DISPLAY_CHARACTERS);
     GString *mask = g_string_new("%s");
@@ -144,6 +156,20 @@ static void clip_gui_update_entry_text(GtkWidget *menu_item)
 
     g_string_free(mask, TRUE);
     g_free(shortened);
+}
+
+static void clip_gui_update_entry(GtkWidget *menu_item, ClipboardEntry *entry)
+{
+    Data *data = clip_gui_get_data(menu_item);
+    if(data == NULL){
+        warn("Got an update action for a missing entry.\n");
+    }
+
+    ClipboardEntry *old_entry = data->entry;
+    data->entry = clip_clipboard_entry_clone(entry);
+    clip_clipboard_entry_free(old_entry);
+
+    clip_gui_update_entry_text(menu_item);
 }
 
 /**
@@ -178,7 +204,6 @@ static void clip_gui_refresh(void)
     ClipboardEntry *current_entry = clip_clipboard_get_head(clipboard);
     clip_clipboard_set(clipboard, current_entry);
     clip_clipboard_entry_free(current_entry);
-
     clip_gui_update_menu_text();
 }
 
@@ -203,6 +228,8 @@ static void clip_gui_remove_widget(GtkWidget *menu_item)
 {
     Data *data = clip_gui_get_data(menu_item);
     if(data != NULL){
+        g_object_set_data(G_OBJECT(menu_item),"data", NULL);
+        clip_clipboard_entry_free(data->entry);
         data->entry = NULL;
         data->row = 0;
         g_free(data);
@@ -213,7 +240,7 @@ static void clip_gui_remove_widget(GtkWidget *menu_item)
 /**
  * Remove the currently selected men item.
  */
-static void clip_gui_remove(GtkWidget *menu_item)
+static void clip_gui_delete(GtkWidget *menu_item)
 {
     GtkWidget *selected_item = clip_gui_get_selected_item();
     if(selected_item == NULL){
@@ -222,13 +249,13 @@ static void clip_gui_remove(GtkWidget *menu_item)
     }
     
     //FIXME: I don't belong here.
-    ClipboardEntry *entry = clip_gui_get_entry(selected_item);
-    if(clip_clipboard_entry_get_locked(entry)){
+    ClipboardEntry *entry = clip_gui_get_entry_copy(selected_item);
+    if(!clip_clipboard_entry_get_locked(entry)){
+        clip_clipboard_remove(clipboard, entry);
+    } else {
         debug("Refusing to delete locked item.\n");
-        return;
     }
-
-    clip_clipboard_remove(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
 /**
@@ -275,11 +302,9 @@ static void clip_gui_lock(GtkWidget *selected_menu_item)
         trace("Tried to lock with no item selected.\n");
         return;
     }
-
-    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
-    if(clip_clipboard_toggle_lock(clipboard, selected_entry)){
-        clip_gui_update_entry_text(selected_menu_item);
-    }
+    ClipboardEntry *entry = clip_gui_get_entry_copy(selected_menu_item);
+    clip_clipboard_toggle_lock(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
 static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
@@ -292,7 +317,7 @@ static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
     trace("Editing current value.\n");
     gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
 
-    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
+    ClipboardEntry *selected_entry = clip_gui_get_entry_copy(selected_menu_item);
     clip_clipboard_disable_history(clipboard);
     char *current = clip_clipboard_entry_get_text(selected_entry);
     char *edited = clip_gui_editor_edit_text(current);
@@ -310,6 +335,7 @@ static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
         debug("Edited text is unchanged. Ignoring edit request.\n");
     }
     clip_gui_editor_free_text(edited);
+    clip_clipboard_entry_free(selected_entry);
 }
 
 static void clip_gui_join(GtkWidget *selected_menu_item)
@@ -318,17 +344,22 @@ static void clip_gui_join(GtkWidget *selected_menu_item)
         trace("Tried to join with no item selected.\n");
         return;
     }
-    clip_clipboard_join(clipboard, clip_gui_get_entry(selected_menu_item));
+    ClipboardEntry *entry = clip_gui_get_entry_copy(selected_menu_item);
+    clip_clipboard_join(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
 static void clip_gui_change_case(GtkWidget *selected_menu_item, gboolean to_upper)
 {
     if(selected_menu_item == NULL){
-        trace("Tried to uppercase with no item selected.");
+        trace("Tried to change case with no item selected.\n");
         return;
     }
+
     gboolean (*func)() = to_upper ? clip_clipboard_to_upper : clip_clipboard_to_lower;
-    func(clipboard, clip_gui_get_entry(selected_menu_item));
+    ClipboardEntry *entry = clip_gui_get_entry_copy(selected_menu_item);
+    func(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
 static void clip_gui_trim(GtkWidget *selected_menu_item)
@@ -337,7 +368,9 @@ static void clip_gui_trim(GtkWidget *selected_menu_item)
         trace("Tried to trim with no item selected.");
         return;
     }
-    clip_clipboard_trim(clipboard, clip_gui_get_entry(selected_menu_item));
+    ClipboardEntry *entry = clip_gui_get_entry_copy(selected_menu_item);
+    clip_clipboard_trim(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
 
@@ -411,7 +444,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
                 break;
             case GDK_KEY_d:
             case GDK_KEY_Delete:
-                clip_gui_remove(selected_menu_item);
+                clip_gui_delete(selected_menu_item);
                 break;
             case GDK_KEY_0: case GDK_KEY_1: case GDK_KEY_2: case GDK_KEY_3: case GDK_KEY_4:
             case GDK_KEY_5: case GDK_KEY_6: case GDK_KEY_7: case GDK_KEY_8: case GDK_KEY_9:
@@ -536,7 +569,7 @@ static void clip_gui_cb_trim(GtkWidget *item, gpointer user_data)
 static void clip_gui_entry_add(ClipboardEntry *entry, int *row)
 {
     Data *data = g_malloc(sizeof(Data));
-    data->entry = entry;
+    data->entry = clip_clipboard_entry_clone(entry);
     data->row = (*row)++;
 
     GtkWidget *item = gtk_menu_item_new_with_label(NULL);
@@ -556,7 +589,7 @@ static void clip_gui_entry_add(ClipboardEntry *entry, int *row)
 /**
  * Updates the menu to contain up-to-date history entries.
  */
-static void clip_gui_prepare_menu(void)
+static void clip_gui_prepare_menu(GList *history)
 {
     trace("Preparing menu.\n");
     gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)clip_gui_cb_remove_menu_item, NULL);
@@ -593,12 +626,10 @@ void clip_gui_show(void)
         return;
     }
 
-    // Release the cached history from last time and update it.
-    clip_clipboard_free_history(history);
-    history = clip_clipboard_get_history(clipboard);
-
+    GList* history = clip_clipboard_get_history(clipboard);
+    clip_gui_prepare_menu(history);
     clip_gui_update_menu_text();
-    clip_gui_prepare_menu();
+    clip_clipboard_free_history(history);
 
     gtk_widget_show_all(menu);
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, 0, gtk_get_current_event_time());
@@ -611,18 +642,15 @@ static void clip_gui_on_event(ClipboardEvent event, ClipboardEntry* entry)
         case CLIPBOARD_REMOVE_EVENT:
             debug("Entry removed.\n");
             clip_gui_remove_widget(clip_gui_get_item(entry));
-            clip_gui_refresh();
             break;
         case CLIPBOARD_UPDATE_EVENT:
             debug("Entry updated.\n");
-            clip_gui_update_entry_text(clip_gui_get_item(entry));
-            clip_gui_refresh();
+            clip_gui_update_entry(clip_gui_get_item(entry), entry);
             break;
         case CLIPBOARD_ADD_EVENT:
             debug("Entry added.\n");
             int i = 1000;
-            clip_gui_entry_add(clip_clipboard_entry_clone(entry), &i);
-            clip_gui_refresh();
+            clip_gui_entry_add(entry, &i);
             break;
     }
 
@@ -666,12 +694,9 @@ void clip_gui_destroy(void)
 {
     keybinder_unbind(GUI_GLOBAL_KEY, clip_gui_cb_hotkey_handler);
 
-    clip_clipboard_free_history(history);
-    history = NULL;
+    clip_gui_search_end();
 
     clipboard = NULL;
-
-    clip_gui_search_end();
 
     g_object_unref(menu_item_search);
     gtk_widget_destroy(menu_item_search);

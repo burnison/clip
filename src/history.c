@@ -192,6 +192,11 @@ static gboolean clip_history_prepend_existing(ClipboardHistory *history, Clipboa
  */
 gboolean clip_history_prepend(ClipboardHistory *history, ClipboardEntry *entry)
 {
+    if(clip_clipboard_entry_get_text(entry) == NULL){
+        error("Refusing to persist a null entry.");
+        return FALSE;
+    }
+
     gboolean success;
     if(clip_clipboard_entry_is_new(entry)){
         success = clip_history_prepend_new(history, entry);
@@ -214,23 +219,28 @@ gboolean clip_history_prepend(ClipboardHistory *history, ClipboardEntry *entry)
 
 gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry)
 {
-    int64_t id = clip_clipboard_entry_get_id(entry);
     char *text = clip_clipboard_entry_get_text(entry);
+    if(text == NULL){
+        error("Refusing to update a null entry.");
+        return FALSE;
+    }
+
+    int64_t id = clip_clipboard_entry_get_id(entry);
+    gboolean success = TRUE;
 
 
     ClipboardEntry *existing = clip_history_get_by_text(history, text);
-    if(existing != NULL){
+    if(existing != NULL && !clip_clipboard_entry_same(entry, existing)){
         debug("Entry, %"PRIu64", already has that value.\n", id);
         gboolean deleted = clip_history_remove(history, existing);
-        clip_clipboard_entry_free(existing);
         if(!deleted){
             warn("Couldn't remove existing record, %"PRIu64" with desired text.\n", id);
-            return FALSE;
+            success = FALSE;
+            goto exit;
         }
     }
 
 
-    gboolean success = TRUE;
     sqlite3_stmt *statement = NULL;
     trace("Updating existing entry, %"PRIu64".\n", id);
     int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_BY_ID_TEXT, -1, &statement, NULL);
@@ -248,10 +258,12 @@ gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry)
         success = FALSE;
     }
     sqlite3_finalize(statement);
+exit:
+    clip_clipboard_entry_free(existing);
     return success;
 }
 
-
+//FIXME: deprecate - merge me into update.
 gboolean clip_history_toggle_lock(ClipboardHistory *history, ClipboardEntry *entry)
 {
     gboolean success = TRUE;
@@ -265,6 +277,8 @@ gboolean clip_history_toggle_lock(ClipboardHistory *history, ClipboardEntry *ent
         if(sqlite3_step(statement) != SQLITE_DONE){
             warn("Couldn't toggle lock for %"PRIu64" (error %d).\n", id, status);
             success = FALSE;
+        } else {
+            clip_events_notify(CLIPBOARD_UPDATE_EVENT, entry);
         }
     } else {
         warn("Couldn't prepare lock toggle query for %"PRIu64" (error %d).\n", id, status);
@@ -368,12 +382,16 @@ ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEnt
         return NULL;
     }
 
+    ClipboardEntry *matching = NULL;
     GList *list = clip_history_get_list(history);
     GList *next = g_list_first(list);
     char *left = clip_clipboard_entry_get_text(entry);
+    if(left == NULL){
+        warn("New entry has no text.\n");
+        goto exit;
+    }
 
     int i = 0;
-    ClipboardEntry *matching = NULL;
     while(i < limit_scan && next != NULL){
         ClipboardEntry *next_entry = next->data;
         if(clip_clipboard_entry_equals(entry, next_entry)){
@@ -381,6 +399,11 @@ ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEnt
         }
 
         char *right = clip_clipboard_entry_get_text(next_entry);
+        if(right == NULL){
+            warn("Historic entry has null text.\n");
+            goto exit;
+        }
+
         int distance = levenshtein_distance(left, right);
         if(distance < SIMILARITY_THRESHOLD){
             trace("Distance of [%s] and [%s] is %d.\n", left, right, distance);
@@ -392,6 +415,7 @@ next:
         next = g_list_next(next);
     }
     trace("Done scanning for similarities.\n");
+exit:
     clip_history_free_list(list);
     return matching;
 }

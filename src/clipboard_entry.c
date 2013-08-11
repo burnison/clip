@@ -124,3 +124,13 @@ gboolean clip_clipboard_entry_equals(ClipboardEntry *a, ClipboardEntry *b)
     }
     return a->id == b->id || !g_strcmp0(a->text, b->text);
 }
+
+gboolean clip_clipboard_entry_same(ClipboardEntry *a, ClipboardEntry *b)
+{
+    if(a == b) {
+        return TRUE;
+    } else if(a == NULL || b == NULL) {
+        return FALSE;
+    }
+    return a->id == b->id;
+}

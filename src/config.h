@@ -75,6 +75,6 @@
 #define GUI_DEBUG_EXIT_MESSAGE "E_xit"
 #define GUI_AUTO_TRIM_MESSAGE "_Auto Trim"
 
-#define LOG_TRACE 1
+#define LOG_TRACE 0
 #define LOG_DEBUG 1
 #define LOG_WARN 1

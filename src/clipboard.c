@@ -127,7 +127,10 @@ static gboolean clip_clipboard_replace_similar(Clipboard *clipboard, ClipboardEn
         debug("Replacing similar entry, %"PRIu64".\n", clip_clipboard_entry_get_id(similar));
         char *new_text = clip_clipboard_entry_get_text(entry);
         clip_clipboard_entry_set_text(similar, new_text);
-        clip_clipboard_remove(clipboard, entry); // Just in case this is an update, remove the old one.
+        if(!clip_clipboard_entry_is_new(entry)){
+            // Just in case this is an update, remove the old one.
+            clip_clipboard_remove(clipboard, entry);
+        }
         clip_clipboard_set(clipboard, similar);
         clip_clipboard_entry_free(similar);
         return TRUE;
@@ -231,8 +234,12 @@ gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry)
     char *current = clip_clipboard_entry_get_text(entry);
     char *lower = g_utf8_strup(current, -1);
     clip_clipboard_entry_set_text(entry, lower);
-    gboolean success = clip_clipboard_replace(clipboard, entry);
     g_free(lower);
+
+    gboolean success = clip_clipboard_replace(clipboard, entry);
+    if(!success){
+        clip_clipboard_entry_set_text(entry, current);
+    }
     return success;
 }
 
@@ -241,8 +248,12 @@ gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry)
     char *current = clip_clipboard_entry_get_text(entry);
     char *upper = g_utf8_strdown(current, -1);
     clip_clipboard_entry_set_text(entry, upper);
-    gboolean success = clip_clipboard_replace(clipboard, entry);
     g_free(upper);
+
+    gboolean success = clip_clipboard_replace(clipboard, entry);
+    if(!success){
+        clip_clipboard_entry_set_text(entry, current);
+    }
     return success;
 }
 
@@ -295,11 +306,14 @@ gboolean clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry)
 
 gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry)
 {
-    if(clip_history_toggle_lock(clipboard->history, entry)){
-        clip_clipboard_entry_set_locked(entry, !clip_clipboard_entry_get_locked(entry));
-        return TRUE;
+    gboolean locked = clip_clipboard_entry_get_locked(entry);
+    clip_clipboard_entry_set_locked(entry, !locked);
+    if(!clip_history_toggle_lock(clipboard->history, entry)){
+        // Update failed for some reason. Revert the estatus.
+        clip_clipboard_entry_set_locked(entry, locked);
+        return FALSE;
     }
-    return FALSE;
+    return TRUE;
 }
 
 
