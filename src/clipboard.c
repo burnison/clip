@@ -113,8 +113,29 @@ void clip_clipboard_set_new(Clipboard *clipboard, char *text)
     clip_clipboard_entry_free(entry);
 }
 
+
+static gboolean clip_clipboard_replace_similar(Clipboard *clipboard, ClipboardEntry *entry)
+{
+    ClipboardEntry *similar = clip_history_get_similar(clipboard->history, entry, SIMILARITY_REPLACEMENT_LIMIT);
+    if(similar != NULL){
+        debug("Replacing similar entry, %"PRIu64".\n", clip_clipboard_entry_get_id(similar));
+        char *new_text = clip_clipboard_entry_get_text(entry);
+        clip_clipboard_entry_set_text(similar, new_text);
+        clip_clipboard_remove(clipboard, entry); // Just in case this is an update, remove the old one.
+        clip_clipboard_set(clipboard, similar);
+        clip_clipboard_entry_free(similar);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry)
 {
+    if(clip_clipboard_replace_similar(clipboard, entry)){
+        debug("This value was swapped out with a similar entry.\n");
+        return;
+    }
+
     char *new = clip_clipboard_entry_get_text(entry);
     char *clean_new = clip_clipboard_clean(clipboard, new);
 
@@ -144,6 +165,7 @@ void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry)
     }
 
     clip_provider_set_current(clipboard->provider, clean_new);
+
 
     ClipboardEntry *existing = clipboard->current;
     clipboard->current = clip_clipboard_entry_clone(entry);
@@ -227,7 +249,7 @@ ClipboardEntry* clip_clipboard_get(Clipboard *clipboard)
 
 ClipboardEntry* clip_clipboard_get_head(Clipboard *clipboard)
 {
-    return clip_history_get_head(clipboard->history);;
+    return clip_history_get_head(clipboard->history);
 }
 
 gboolean clip_clipboard_is_head(Clipboard *clipboard, ClipboardEntry *entry)

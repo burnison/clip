@@ -219,12 +219,13 @@ static GtkWidget* clip_gui_get_nth_menu_item(unsigned int n)
     GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
     GList *next = g_list_first(children);
     GtkWidget *nth = NULL;
-    while((next = g_list_next(next))){
+    while(next){
         Data *data = clip_gui_get_data(next->data);
         if(data != NULL && data->row == n){
             nth = next->data;
             break;
         }
+        next = g_list_next(next);
     }
     g_list_free(children);
     return nth;
@@ -362,10 +363,10 @@ static void clip_gui_search_select_match(void)
 
     // Iterate through each list and check if it's a match.
     GtkWidget *first_match = NULL;
-    while((next = g_list_next(next))){
+    while(next){
         GtkWidget *contents = gtk_bin_get_child(GTK_BIN(next->data));
         if(!clip_gui_is_selectable(contents)){
-            continue;
+            goto next;
         }
         GtkLabel *label = GTK_LABEL(contents);
         const char *text = gtk_label_get_text(label);
@@ -383,6 +384,8 @@ static void clip_gui_search_select_match(void)
                 break;
             }
         }
+next:
+        next = g_list_next(next);
     }
 
     trace("Active position is %d and search position is %d.\n", active_position, clip_gui_search_get_position());

@@ -120,6 +120,24 @@ These strategies may be changed by selecting the "Trim" menu item, which indicat
 non-destructive and will not change the source data. Keep in mind that when enabled, this feature may result in the
 primary clipboard selection to become unselected in some applications (such as rxvt).
 
+Similarity Detection
+--------------------
+
+Clip employs a duplication detection mechanism that computes the Levenshtein distance between existing entries and new
+entries to determine if they are logical duplicates. By default, this is only applied to the top 10% of all records so
+that history doesn't become sporadic. More specifically, this implementation considers records as duplicates only if
+they are similar in both time and space.
+
+This feature is mainly intended to reduce the number of duplicate values that would otherwise clutter the history. It
+works on the assumption that the last record selected is the "correct" record for a given value. Consider the following
+values endered into Clip in the following order:
+
+* @example.com
+* xample.com,
+* example.com
+
+After adding all three values to Clip, Clip would only show the final record, 'example.com', which is very likely the
+expected value.
 
 
 Known Issues

@@ -20,18 +20,36 @@
 #define PROGRAM "Clip"
 #define CLIP_HOME ".clip"
 
+#define HISTORY_FILE "history.sqlite"
+
 /**
  * The number of milliseconds between rescanning the clipboards for changes.
  */
 #define DAEMON_REFRESH_INTERVAL 500
 
+/**
+ * The default auto-trim operation.
+ */
 #define DEFAULT_TRIM_MODE TRIM_CHOMP
 
 /**
  * The maximum number of elements to retain in the history.
  */
 #define HISTORY_MAX_SIZE 150
-#define HISTORY_FILE "history.sqlite"
+
+/**
+ * Up to this many records will  be checked for similarity-based replacement
+ * before giving up. This number should be big enough that it'll pick-up 
+ * accidental selection resizing but small enough that it won't interfere
+ * with older data. Setting to 0 will effectively disable this feature.
+ */
+#define SIMILARITY_REPLACEMENT_LIMIT 15
+
+/**
+ * Similarity is currently determined using a levenshtein distance. Values with
+ * a difference less than this value will be considered the same.
+ */
+#define SIMILARITY_THRESHOLD 3
 
 /**
  * The key to press to enter search mode.
@@ -57,6 +75,6 @@
 #define GUI_DEBUG_EXIT_MESSAGE "E_xit"
 #define GUI_AUTO_TRIM_MESSAGE "_Auto Trim"
 
-#define LOG_TRACE 0
+#define LOG_TRACE 1
 #define LOG_DEBUG 1
 #define LOG_WARN 1

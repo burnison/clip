@@ -23,6 +23,7 @@
 #include "utils.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <sqlite3.h>
 
 
@@ -60,6 +61,7 @@ struct history {;
     sqlite3 *storage;
     int count;
 };
+static int levenshtein_distance(const char *s, const char *t);
 
 static void clip_history_storage_count(ClipboardHistory *history)
 {
@@ -100,24 +102,21 @@ ClipboardHistory* clip_history_new()
     return history;
 }
 
-
-static void clip_history_close_storage(ClipboardHistory *history)
-{
-    // It's possible the storage didn't get opened.
-    if(history->storage != NULL){
-        sqlite3_close(history->storage);
-        history->storage = NULL;
-    }
-}
-
 void clip_history_free(ClipboardHistory *history)
 {
     if(history == NULL){
         warn("Attempted to free NULL history.\n");
         return;
+    } else if(history->storage != NULL){
+        sqlite3_close(history->storage);
+        history->storage = NULL;
     }
-    clip_history_close_storage(history);
     g_free(history);
+}
+
+void clip_history_free_list(GList *list)
+{
+    g_list_free_full(list, (GDestroyNotify)clip_clipboard_entry_free);
 }
 
 
@@ -228,6 +227,27 @@ gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry)
 }
 
 
+gboolean clip_history_toggle_lock(ClipboardHistory *history, ClipboardEntry *entry)
+{
+    gboolean success = TRUE;
+    sqlite3_stmt *statement = NULL;
+    int64_t id = clip_clipboard_entry_get_id(entry);
+
+    trace("Toggling entry lock for %"PRIu64".\n", id);
+    int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_TOGGLE_LOCK, -1, &statement, NULL);
+    if(status == SQLITE_OK){
+        sqlite3_bind_int64(statement, 1, id);
+        if(sqlite3_step(statement) != SQLITE_DONE){
+            warn("Couldn't toggle lock for %"PRIu64" (error %d).\n", id, status);
+            success = FALSE;
+        }
+    } else {
+        warn("Couldn't prepare lock toggle query for %"PRIu64" (error %d).\n", id, status);
+        success = FALSE;
+    }
+    sqlite3_finalize(statement);
+    return success;
+}
 
 
 /**
@@ -267,47 +287,6 @@ gboolean clip_history_remove_head(ClipboardHistory *history)
     return success;
 }
 
-
-
-ClipboardEntry* clip_history_get_head(ClipboardHistory *history)
-{
-    ClipboardEntry *head = NULL;
-    GList *list = clip_history_get_list(history);
-    if(list == NULL){
-        goto exit;
-    }
-
-    head = clip_clipboard_entry_clone(g_list_first(list)->data);
-
-exit:
-    clip_history_free_list(list);
-    return head;
-}
-
-gboolean clip_history_toggle_lock(ClipboardHistory *history, ClipboardEntry *entry)
-{
-    gboolean success = TRUE;
-    sqlite3_stmt *statement = NULL;
-    int64_t id = clip_clipboard_entry_get_id(entry);
-
-    trace("Toggling entry lock for %"PRIu64".\n", id);
-    int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_TOGGLE_LOCK, -1, &statement, NULL);
-    if(status == SQLITE_OK){
-        sqlite3_bind_int64(statement, 1, id);
-        if(sqlite3_step(statement) != SQLITE_DONE){
-            warn("Couldn't toggle lock for %"PRIu64" (error %d).\n", id, status);
-            success = FALSE;
-        }
-    } else {
-        warn("Couldn't prepare lock toggle query for %"PRIu64" (error %d).\n", id, status);
-        success = FALSE;
-    }
-    sqlite3_finalize(statement);
-    return success;
-}
-
-
-
 void clip_history_clear(ClipboardHistory *history)
 {
     int status = sqlite3_exec(history->storage, HISTORY_TRUNCATE_HISTORY, NULL, NULL, NULL);
@@ -316,6 +295,7 @@ void clip_history_clear(ClipboardHistory *history)
     }
     history->count -= sqlite3_changes(history->storage);
 }
+
 
 
 GList* clip_history_get_list(ClipboardHistory *history)
@@ -339,7 +319,94 @@ GList* clip_history_get_list(ClipboardHistory *history)
     return list;
 }
 
-void clip_history_free_list(GList *list)
+ClipboardEntry* clip_history_get_head(ClipboardHistory *history)
 {
-    g_list_free_full(list, (GDestroyNotify)clip_clipboard_entry_free);
+    ClipboardEntry *head = NULL;
+    GList *list = clip_history_get_list(history);
+    if(list == NULL){
+        goto exit;
+    }
+    head = clip_clipboard_entry_clone(g_list_first(list)->data);
+exit:
+    clip_history_free_list(list);
+    return head;
+}
+
+ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEntry *entry, int limit_scan)
+{
+    if(limit_scan < 1){
+        return NULL;
+    }
+
+    GList *list = clip_history_get_list(history);
+    GList *next = g_list_first(list);
+    char *left = clip_clipboard_entry_get_text(entry);
+
+    int i = 0;
+    ClipboardEntry *matching = NULL;
+    while(i < limit_scan && next){
+        ClipboardEntry *next_entry = next->data;
+        if(clip_clipboard_entry_equals(entry, next_entry)){
+            goto next;
+        }
+
+        char *right = clip_clipboard_entry_get_text(next_entry);
+        int distance = levenshtein_distance(left, right);
+        if(distance < SIMILARITY_THRESHOLD){
+            trace("Distance of [%s] and [%s] is %d.\n", left, right, distance);
+            matching = clip_clipboard_entry_clone(next_entry);
+            break;
+        }
+next:
+        i++;
+        next = g_list_next(next);
+    }
+    trace("Done scanning for similarities.\n");
+    clip_history_free_list(list);
+    return matching;
+}
+
+
+
+/** 
+ * No author specified. See http://rosettacode.org/wiki/Levenshtein_distance#C.
+ */
+static int levenshtein_distance(const char *s, const char *t)
+{
+    int ls = strlen(s);
+    int lt = strlen(t);
+    int d[ls + 1][lt + 1];
+    for (int i = 0; i <= ls; i++){
+        for (int j = 0; j <= lt; j++){
+            d[i][j] = -1;
+        }
+    }
+
+    int dist(int i, int j)
+    {
+        if (d[i][j] >= 0){
+            return d[i][j];
+        }
+
+        int x;
+        if (i == ls){
+            x = lt - j;
+        } else if(j == lt){
+            x = ls - i;
+        } else if (s[i] == t[j]){
+            x = dist(i + 1, j + 1);
+        } else {
+            x = dist(i + 1, j + 1);
+            int y;
+            if ((y = dist(i, j + 1)) < x){
+                x = y;
+            }
+            if ((y = dist(i + 1, j)) < x){
+                x = y;
+            }
+            x++;
+        }
+        return d[i][j] = x;
+    }
+    return dist(0, 0);
 }
