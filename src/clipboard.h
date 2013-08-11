@@ -65,12 +65,17 @@ void clip_clipboard_set_new(Clipboard* clipboard, char* text);
 /**
  * Remove the specified entry.
  */
-void clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry);
+gboolean clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry);
 /**
  * Save the changes to the specified entry without changing the current 
  * clipboard value.
  */
 gboolean clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry);
+/**
+ * Clear the clipboard.
+ */
+void clip_clipboard_clear(Clipboard* clipboard);
+
 
 
 
@@ -82,11 +87,7 @@ gboolean clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_join(Clipboard *clipboard, ClipboardEntry *left);
 gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry);
-
-
-
-void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);
-void clip_clipboard_clear(Clipboard* clipboard);
+gboolean clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);
 
 
 gboolean clip_clipboard_is_enabled(Clipboard* clipboard);

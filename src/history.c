@@ -133,13 +133,13 @@ static void clip_history_evict(ClipboardHistory* history)
 
 
 
-static void clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* entry)
+static gboolean clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    trace("Prepending new entry.\n");
-
+    gboolean success = TRUE;
     sqlite3_stmt* statement = NULL;
     char* text = clip_clipboard_entry_get_text(entry);
 
+    trace("Prepending new entry.\n");
     int status = sqlite3_prepare(history->storage, HISTORY_INSERT_NEW_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
@@ -149,15 +149,19 @@ static void clip_history_prepend_new(ClipboardHistory* history, ClipboardEntry* 
             debug("Created new history entry, %"PRIu64".\n", id);
         } else {
             warn("Couldn't prepend new entry (error %d).\n", status);
+            success = FALSE;
         }
     } else {
         warn("Couldn't prepare entry prepend (error %d).\n", status);
+        success = FALSE;
     }
     sqlite3_finalize(statement);
+    return success;
 }
 
-static void clip_history_prepend_existing(ClipboardHistory* history, ClipboardEntry* entry)
+static gboolean clip_history_prepend_existing(ClipboardHistory* history, ClipboardEntry* entry)
 {
+    gboolean success = TRUE;
     sqlite3_stmt* statement = NULL;
     int64_t id = clip_clipboard_entry_get_id(entry);
     char* text = clip_clipboard_entry_get_text(entry);
@@ -169,22 +173,26 @@ static void clip_history_prepend_existing(ClipboardHistory* history, ClipboardEn
         sqlite3_bind_int64(statement, 2, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
             warn("Couldn't prepend existing entry, %"PRIu64" (error %d).\n", id, status);
+            success = FALSE;
         }
     } else {
         warn("Couldn't prepare entry prepend for %"PRIu64" (error %d).\n", id, status);
+        success = FALSE;
     }
     sqlite3_finalize(statement);
+    return success;
 }
 
 /**
  * Creates and returns a new history entry. Invokers are responsible for freeing it.
  */
-void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
+gboolean clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 {
+    gboolean success;
     if(clip_clipboard_entry_is_new(entry)){
-        clip_history_prepend_new(history, entry);
+        success = clip_history_prepend_new(history, entry);
     } else {
-        clip_history_prepend_existing(history, entry);
+        success = clip_history_prepend_existing(history, entry);
     }
 
     // Reacquire the new count (an insert may have been a replace).
@@ -192,9 +200,8 @@ void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
     if(history->count > HISTORY_MAX_SIZE){
         clip_history_evict(history);
     }
+    return success;
 }
-
-
 
 gboolean clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
 {
@@ -226,23 +233,40 @@ gboolean clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
 /**
  * Removes the entry from the history. This function does not free the entry, just removes it from the backing store.
  */
-void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
+gboolean clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    int64_t id = clip_clipboard_entry_get_id(entry);
-    trace("Removing clipboard entry %"PRIu64".\n", id);
-
+    gboolean success = TRUE;
     sqlite3_stmt* statement = NULL;
+    int64_t id = clip_clipboard_entry_get_id(entry);
+
+    trace("Removing clipboard entry %"PRIu64".\n", id);
     int status = sqlite3_prepare(history->storage, HISTORY_DELETE_HISTORY, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_int64(statement, 1, id);
         if(sqlite3_step(statement) != SQLITE_DONE){
             warn("Couldn't remove entry, %"PRIu64" (error %d).\n", id, status);
+            success = FALSE;
         }
     } else {
         warn("Couldn't prepare entry removal query for %"PRIu64" (error %d).\n", id, status);
+        success = FALSE;
     }
     sqlite3_finalize(statement);
+    return success;
 }
+
+gboolean clip_history_remove_head(ClipboardHistory* history)
+{
+    gboolean success = TRUE;
+    int status = sqlite3_exec(history->storage, HISTORY_REMOVE_NEWEST_UNLOCKED, NULL, NULL, NULL);
+    if(SQLITE_OK != status){
+        warn("Cannot remove newest history record (error %d).\n", status);
+        success = FALSE;
+    }
+    history->count -= sqlite3_changes(history->storage);
+    return success;
+}
+
 
 
 ClipboardEntry* clip_history_get_head(ClipboardHistory* history)
@@ -260,31 +284,26 @@ exit:
     return head;
 }
 
-void clip_history_remove_head(ClipboardHistory* history)
+gboolean clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry)
 {
-    int status = sqlite3_exec(history->storage, HISTORY_REMOVE_NEWEST_UNLOCKED, NULL, NULL, NULL);
-    if(SQLITE_OK != status){
-        warn("Cannot remove newest history record (error %d).\n", status);
-    }
-    history->count -= sqlite3_changes(history->storage);
-}
-
-void clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry)
-{
-    int64_t id = clip_clipboard_entry_get_id(entry);
-    trace("Toggling entry lock for %"PRIu64".\n", id);
-
+    gboolean success = TRUE;
     sqlite3_stmt* statement = NULL;
+    int64_t id = clip_clipboard_entry_get_id(entry);
+
+    trace("Toggling entry lock for %"PRIu64".\n", id);
     int status = sqlite3_prepare(history->storage, HISTORY_UPDATE_TOGGLE_LOCK, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_int64(statement, 1, id);
         if(sqlite3_step(statement) != SQLITE_DONE){
             warn("Couldn't toggle lock for %"PRIu64" (error %d).\n", id, status);
+            success = FALSE;
         }
     } else {
         warn("Couldn't prepare lock toggle query for %"PRIu64" (error %d).\n", id, status);
+        success = FALSE;
     }
     sqlite3_finalize(statement);
+    return success;
 }
 
 

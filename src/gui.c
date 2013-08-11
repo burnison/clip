@@ -205,9 +205,10 @@ static void clip_gui_remove(GtkWidget *menu_item)
         return;
     }
 
-    clip_clipboard_remove(clipboard, entry);
-    clip_gui_remove_widget(selected_item);
-    clip_gui_refresh();
+    if(clip_clipboard_remove(clipboard, entry)){
+        clip_gui_remove_widget(selected_item);
+        clip_gui_refresh();
+    }
 }
 
 /**
@@ -253,9 +254,11 @@ static void clip_gui_lock(GtkWidget *selected_menu_item)
         trace("Tried to lock with no item selected.\n");
         return;
     }
+
     ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
-    clip_clipboard_toggle_lock(clipboard, selected_entry);
-    clip_gui_update_entry_text(selected_menu_item);
+    if(clip_clipboard_toggle_lock(clipboard, selected_entry)){
+        clip_gui_update_entry_text(selected_menu_item);
+    }
 }
 
 static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
@@ -285,7 +288,6 @@ static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
     } else {
         debug("Edited text is unchanged. Ignoring edit request.\n");
     }
-
     clip_gui_editor_free_text(edited);
 }
 

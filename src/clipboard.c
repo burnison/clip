@@ -251,17 +251,20 @@ gboolean clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry)
     return clip_history_update(clipboard->history, entry);
 }
 
-void clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry)
+gboolean clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry)
 {
-    clip_history_remove(clipboard->history, entry);
+    return clip_history_remove(clipboard->history, entry);
 }
 
 
 
-void clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry)
+gboolean clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry)
 {
-    clip_history_toggle_lock(clipboard->history, entry);
-    clip_clipboard_entry_set_locked(entry, !clip_clipboard_entry_get_locked(entry));
+    if(clip_history_toggle_lock(clipboard->history, entry)){
+        clip_clipboard_entry_set_locked(entry, !clip_clipboard_entry_get_locked(entry));
+        return TRUE;
+    }
+    return FALSE;
 }
 
 
