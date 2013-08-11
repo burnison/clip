@@ -85,6 +85,7 @@ void clip_clipboard_clear(Clipboard* clipboard);
  * the clipboard's current state.
  */
 gboolean clip_clipboard_join(Clipboard *clipboard, ClipboardEntry *left);
+gboolean clip_clipboard_trim(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);

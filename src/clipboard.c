@@ -60,7 +60,7 @@ void clip_clipboard_free(Clipboard* clipboard)
 }
 
 
-char* clip_clipboard_clean(Clipboard* clipboard, char* text)
+static char* clip_clipboard_clean(Clipboard* clipboard, char* text)
 {
     if(text == NULL){
         return NULL;
@@ -189,6 +189,13 @@ gboolean clip_clipboard_join(Clipboard* clipboard, ClipboardEntry* left)
 exit:
     clip_history_free_list(list);
     return changed;
+}
+
+gboolean clip_clipboard_trim(Clipboard *clipboard, ClipboardEntry *entry)
+{
+    char *current = clip_clipboard_entry_get_text(entry);
+    g_strstrip(current);
+    return clip_clipboard_replace(clipboard, entry);
 }
 
 gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry)

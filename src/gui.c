@@ -327,6 +327,20 @@ static void clip_gui_change_case(GtkWidget *selected_menu_item, gboolean to_uppe
     }
 }
 
+static void clip_gui_trim(GtkWidget *selected_menu_item)
+{
+    if(selected_menu_item == NULL){
+        trace("Tried to trim with no item selected.");
+        return;
+    }
+
+    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
+    if(clip_clipboard_trim(clipboard, selected_entry)){
+        clip_gui_update_entry_text(selected_menu_item);
+    }
+}
+
+
 /**
  * Moves the currently selected item to the nth match on the menu.
  */
@@ -417,6 +431,9 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
             case GDK_KEY_u:
             case GDK_KEY_U:
                 clip_gui_change_case(selected_menu_item, keyval == GDK_KEY_U);
+                break;
+            case GDK_KEY_t:
+                clip_gui_trim(selected_menu_item);
                 break;
             default:
                 break;
