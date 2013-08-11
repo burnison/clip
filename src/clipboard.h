@@ -63,13 +63,6 @@ void clip_clipboard_set_new(Clipboard* clipboard, char* text);
 
 
 /**
- * Join the specified entry with its next adjacent entry. This will not modify 
- * the clipboard's current state.
- */
-gboolean clip_clipboard_join(Clipboard *clipboard, ClipboardEntry *left);
-
-
-/**
  * Remove the specified entry.
  */
 void clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry);
@@ -77,7 +70,18 @@ void clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry);
  * Save the changes to the specified entry without changing the current 
  * clipboard value.
  */
-void clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry);
+gboolean clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry);
+
+
+
+
+/**
+ * Join the specified entry with its next adjacent entry. This will not modify 
+ * the clipboard's current state.
+ */
+gboolean clip_clipboard_join(Clipboard *clipboard, ClipboardEntry *left);
+gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry);
+gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry);
 
 
 

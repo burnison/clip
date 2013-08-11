@@ -82,6 +82,11 @@ to the join behaviour of Vi. Joining a row will not activate it, allowing multip
 dialog. Finally, the usage counter is inherited from the left-most entry as opposed to merging the counters. This was
 done to prevent entries from remaining around for too long.
 
+Changing Case
+-------------
+
+Similar to Vi, Clip can change the case of a record by pressing "u" or "U" when a record is selected. To change the case
+to lower case, press "u"; to change case to upper, press "U". Changing case of the head record does not activate it.
 
 
 

@@ -94,7 +94,7 @@ static void clip_gui_set_markedup_label(GtkBin* item, char* format, char* text)
 /**
  * Sets the provided menu item's text according to its state.
  */
-static void clip_gui_set_entry_text(GtkWidget *menu_item)
+static void clip_gui_update_entry_text(GtkWidget *menu_item)
 {
     Data *data = clip_gui_get_data(menu_item);
     char* text = clip_clipboard_entry_get_text(data->entry);
@@ -255,7 +255,7 @@ static void clip_gui_lock(GtkWidget *selected_menu_item)
     }
     ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
     clip_clipboard_toggle_lock(clipboard, selected_entry);
-    clip_gui_set_entry_text(selected_menu_item);
+    clip_gui_update_entry_text(selected_menu_item);
 }
 
 static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
@@ -307,11 +307,23 @@ static void clip_gui_join(GtkWidget *selected_menu_item)
     GList *next_child = g_list_next(selected_child);
 
     clip_gui_remove_widget(next_child->data);
-    clip_gui_set_entry_text(selected_menu_item);
-
+    clip_gui_update_entry_text(selected_menu_item);
     g_list_free(children);
 }
 
+static void clip_gui_change_case(GtkWidget *selected_menu_item, gboolean to_upper)
+{
+    if(selected_menu_item == NULL){
+        trace("Tried to uppercase with no item selected.");
+        return;
+    }
+
+    ClipboardEntry *selected_entry = clip_gui_get_entry(selected_menu_item);
+    gboolean (*func)() = to_upper ? clip_clipboard_to_upper : clip_clipboard_to_lower;
+    if(func(clipboard, selected_entry)){
+        clip_gui_update_entry_text(selected_menu_item);
+    }
+}
 
 /**
  * Moves the currently selected item to the nth match on the menu.
@@ -399,6 +411,10 @@ static gboolean clip_gui_cb_keypress(GtkWidget* widget, GdkEvent* event, gpointe
                 break;
             case GDK_KEY_l:
                 clip_gui_lock(selected_menu_item);
+                break;
+            case GDK_KEY_u:
+            case GDK_KEY_U:
+                clip_gui_change_case(selected_menu_item, keyval == GDK_KEY_U);
                 break;
             default:
                 break;
@@ -504,7 +520,7 @@ static void clip_gui_entry_add(ClipboardEntry* entry, int *row)
 
     GtkWidget* item = gtk_menu_item_new_with_label(NULL);
     g_object_set_data(G_OBJECT(item),"data", data);
-    clip_gui_set_entry_text(item);
+    clip_gui_update_entry_text(item);
 
     g_signal_connect(G_OBJECT(item), "button-release-event", G_CALLBACK(clip_gui_cb_toggle_lock), data);
     g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(clip_gui_cb_history_activated), data);

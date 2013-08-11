@@ -196,8 +196,9 @@ void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry)
 
 
 
-void clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
+gboolean clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
 {
+    gboolean success = TRUE;
     sqlite3_stmt* statement = NULL;
     int64_t id = clip_clipboard_entry_get_id(entry);
     char* text = clip_clipboard_entry_get_text(entry);
@@ -209,11 +210,14 @@ void clip_history_update(ClipboardHistory* history, ClipboardEntry* entry)
         sqlite3_bind_int64(statement, 2, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
             warn("Couldn't update entry, %"PRIu64" (error %d).\n", id, status);
+            success = FALSE;
         }
     } else {
         warn("Couldn't prepare entry update for %"PRIu64" (error %d).\n", id, status);
+        success = FALSE;
     }
     sqlite3_finalize(statement);
+    return success;
 }
 
 

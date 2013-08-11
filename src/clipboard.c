@@ -191,6 +191,25 @@ exit:
     return changed;
 }
 
+gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry)
+{
+    char *current = clip_clipboard_entry_get_text(entry);
+    char *lower = g_utf8_strup(current, -1);
+    clip_clipboard_entry_set_text(entry, lower);
+    gboolean success = clip_clipboard_replace(clipboard, entry);
+    g_free(lower);
+    return success;
+}
+
+gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry)
+{
+    char *current = clip_clipboard_entry_get_text(entry);
+    char *upper = g_utf8_strdown(current, -1);
+    clip_clipboard_entry_set_text(entry, upper);
+    gboolean success = clip_clipboard_replace(clipboard, entry);
+    g_free(upper);
+    return success;
+}
 
 
 
@@ -227,9 +246,9 @@ TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard)
 
 
 
-void clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry)
+gboolean clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry)
 {
-    clip_history_update(clipboard->history, entry);
+    return clip_history_update(clipboard->history, entry);
 }
 
 void clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry)

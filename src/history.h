@@ -27,7 +27,7 @@ ClipboardHistory* clip_history_new(void);
 void clip_history_free(ClipboardHistory* history);
 
 void clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry);
-void clip_history_update(ClipboardHistory* history, ClipboardEntry* entry);
+gboolean clip_history_update(ClipboardHistory* history, ClipboardEntry* entry);
 
 void clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry);
 void clip_history_remove_head(ClipboardHistory* history);
