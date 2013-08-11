@@ -18,11 +18,12 @@
  */
 
 #include "clipboard.h"
+#include "clipboard_events.h"
 #include "history.h"
 #include "utils.h"
-#include "string.h"
 
 #include <glib.h>
+#include <string.h>
 
 
 struct clipboard {
@@ -35,6 +36,8 @@ struct clipboard {
 
 
 
+static void clip_clipboard_on_event(ClipboardEvent event, ClipboardEntry* entry);
+
 Clipboard* clip_clipboard_new(ClipboardProvider *provider)
 {
     Clipboard *clipboard = g_malloc(sizeof(Clipboard));
@@ -43,6 +46,9 @@ Clipboard* clip_clipboard_new(ClipboardProvider *provider)
     clipboard->enabled = TRUE;
     clipboard->current = NULL;
     clipboard->trim_mode = DEFAULT_TRIM_MODE;
+
+    clip_events_add_observer(clip_clipboard_on_event);
+
     return clipboard;
 }
 
@@ -347,4 +353,9 @@ GList* clip_clipboard_get_history(Clipboard *clipboard)
 void clip_clipboard_free_history(GList *history)
 {
     clip_history_free_list(history);
+}
+
+
+static void clip_clipboard_on_event(ClipboardEvent event, ClipboardEntry* entry)
+{
 }

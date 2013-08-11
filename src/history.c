@@ -17,9 +17,9 @@
  * along with Clip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "history.h"
-
+#include "clipboard_events.h"
 #include "config.h"
+#include "history.h"
 #include "utils.h"
 
 #include <stdlib.h>
@@ -63,6 +63,7 @@ static ClipboardEntry* clip_history_get_by_text(ClipboardHistory *history, char 
 struct history {;
     sqlite3 *storage;
     int count;
+    GList *observers;
 };
 
 static void clip_history_storage_count(ClipboardHistory *history)
@@ -98,6 +99,7 @@ ClipboardHistory* clip_history_new()
     ClipboardHistory *history = g_malloc(sizeof(ClipboardHistory));
     history->storage = NULL;
     history->count = 0;
+    history->observers = NULL;
 
     clip_history_storage_open(history);
 
@@ -112,6 +114,8 @@ void clip_history_free(ClipboardHistory *history)
     } else if(history->storage != NULL){
         sqlite3_close(history->storage);
         history->storage = NULL;
+        g_list_free(history->observers);
+        history->observers = NULL;
     }
     g_free(history);
 }
@@ -120,7 +124,6 @@ void clip_history_free_list(GList *list)
 {
     g_list_free_full(list, (GDestroyNotify)clip_clipboard_entry_free);
 }
-
 
 static void clip_history_evict(ClipboardHistory *history)
 {
@@ -201,7 +204,12 @@ gboolean clip_history_prepend(ClipboardHistory *history, ClipboardEntry *entry)
     if(history->count > HISTORY_MAX_SIZE){
         clip_history_evict(history);
     }
-    return success;
+
+    if(success){
+        clip_events_notify(CLIPBOARD_ADD_EVENT, entry);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry)
@@ -232,6 +240,8 @@ gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry)
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
             warn("Couldn't update entry, %"PRIu64" (error %d).\n", id, status);
             success = FALSE;
+        } else {
+            clip_events_notify(CLIPBOARD_UPDATE_EVENT, entry);
         }
     } else {
         warn("Couldn't prepare entry update for %"PRIu64" (error %d).\n", id, status);
@@ -281,6 +291,8 @@ gboolean clip_history_remove(ClipboardHistory *history, ClipboardEntry *entry)
         if(sqlite3_step(statement) != SQLITE_DONE){
             warn("Couldn't remove entry, %"PRIu64" (error %d).\n", id, status);
             success = FALSE;
+        } else {
+            clip_events_notify(CLIPBOARD_REMOVE_EVENT, entry);
         }
     } else {
         warn("Couldn't prepare entry removal query for %"PRIu64" (error %d).\n", id, status);
@@ -362,7 +374,7 @@ ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEnt
 
     int i = 0;
     ClipboardEntry *matching = NULL;
-    while(i < limit_scan && next){
+    while(i < limit_scan && next != NULL){
         ClipboardEntry *next_entry = next->data;
         if(clip_clipboard_entry_equals(entry, next_entry)){
             goto next;

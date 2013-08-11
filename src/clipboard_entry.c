@@ -19,7 +19,6 @@
 
 #include "clipboard_entry.h"
 
-
 struct clipboard_entry {
     uint64_t id;
     char *text;

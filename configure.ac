@@ -1,8 +1,9 @@
 AC_PREREQ([2.67])
 
-AC_INIT([clip], [0.1], [bugs@burnison.ca])
+AC_INIT([clip], [1.1], [richard@burnison.ca])
 AC_CONFIG_SRCDIR([src/main.c])
 AM_INIT_AUTOMAKE([-Wall])
+
 
 AC_PROG_CC
 AM_PROG_CC_C_O
