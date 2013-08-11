@@ -22,27 +22,27 @@
 
 typedef struct clipboard_entry ClipboardEntry;
 
-ClipboardEntry* clip_clipboard_entry_new(int64_t id, char* text, gboolean locked, unsigned int count);
-ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry);
-void clip_clipboard_entry_free(ClipboardEntry* entry);
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count);
+ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry *entry);
+void clip_clipboard_entry_free(ClipboardEntry *entry);
 
-gboolean clip_clipboard_entry_is_new(ClipboardEntry* entry);
+gboolean clip_clipboard_entry_is_new(ClipboardEntry *entry);
 
-uint64_t clip_clipboard_entry_get_id(ClipboardEntry* entry);
-void clip_clipboard_entry_set_id(ClipboardEntry* entry, uint64_t id);
+uint64_t clip_clipboard_entry_get_id(ClipboardEntry *entry);
+void clip_clipboard_entry_set_id(ClipboardEntry *entry, uint64_t id);
 
 /**
  * Return a pointer to the entry's text.
  */
-char* clip_clipboard_entry_get_text(ClipboardEntry* entry);
+char* clip_clipboard_entry_get_text(ClipboardEntry *entry);
 /**
  * Change the entry's text.
  */
-void clip_clipboard_entry_set_text(ClipboardEntry* entry, char* text);
+void clip_clipboard_entry_set_text(ClipboardEntry *entry, char *text);
 
-unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry);
+unsigned int clip_clipboard_entry_get_count(ClipboardEntry *entry);
 
-gboolean clip_clipboard_entry_get_locked(ClipboardEntry* entry);
-void clip_clipboard_entry_set_locked(ClipboardEntry* entry, gboolean locked);
+gboolean clip_clipboard_entry_get_locked(ClipboardEntry *entry);
+void clip_clipboard_entry_set_locked(ClipboardEntry *entry, gboolean locked);
 
-gboolean clip_clipboard_entry_equals(ClipboardEntry* a, ClipboardEntry* b);
+gboolean clip_clipboard_entry_equals(ClipboardEntry *a, ClipboardEntry *b);

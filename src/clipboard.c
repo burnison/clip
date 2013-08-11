@@ -26,18 +26,18 @@
 
 
 struct clipboard {
-    ClipboardProvider* provider;
-    ClipboardHistory* history;
-    ClipboardEntry* current;
+    ClipboardProvider *provider;
+    ClipboardHistory *history;
+    ClipboardEntry *current;
     TrimMode trim_mode;
     gboolean enabled;
 };
 
 
 
-Clipboard* clip_clipboard_new(ClipboardProvider* provider)
+Clipboard* clip_clipboard_new(ClipboardProvider *provider)
 {
-    Clipboard* clipboard = g_malloc(sizeof(Clipboard));
+    Clipboard *clipboard = g_malloc(sizeof(Clipboard));
     clipboard->provider = provider;
     clipboard->history = clip_history_new();
     clipboard->enabled = TRUE;
@@ -46,7 +46,7 @@ Clipboard* clip_clipboard_new(ClipboardProvider* provider)
     return clipboard;
 }
 
-void clip_clipboard_free(Clipboard* clipboard)
+void clip_clipboard_free(Clipboard *clipboard)
 {
     if(clipboard == NULL){
         return;
@@ -60,7 +60,7 @@ void clip_clipboard_free(Clipboard* clipboard)
 }
 
 
-static char* clip_clipboard_clean(Clipboard* clipboard, char* text)
+static char* clip_clipboard_clean(Clipboard *clipboard, char *text)
 {
     if(text == NULL){
         return NULL;
@@ -96,7 +96,7 @@ static gboolean clip_clipboard_compare_entries(ClipboardEntry *a, ClipboardEntry
  * Identifies if the two values differ in a meaningful way, regardless of 
  * left or right padding.
  */
-static gboolean clip_clipboard_different(char* new, char* old)
+static gboolean clip_clipboard_different(char *new, char *old)
 {
     char *stripped_new = g_strstrip(g_strdup(new));
     char *stripped_old = g_strstrip(g_strdup(old));
@@ -106,14 +106,14 @@ static gboolean clip_clipboard_different(char* new, char* old)
     return different;
 }
 
-void clip_clipboard_set_new(Clipboard* clipboard, char* text)
+void clip_clipboard_set_new(Clipboard *clipboard, char *text)
 {
-	ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0);
-	clip_clipboard_set(clipboard, entry);
-	clip_clipboard_entry_free(entry);
+    ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0);
+    clip_clipboard_set(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
-void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry)
+void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry)
 {
     char *new = clip_clipboard_entry_get_text(entry);
     char *clean_new = clip_clipboard_clean(clipboard, new);
@@ -165,7 +165,7 @@ exit:
 
 
 
-gboolean clip_clipboard_join(Clipboard* clipboard, ClipboardEntry* left)
+gboolean clip_clipboard_join(Clipboard *clipboard, ClipboardEntry *left)
 {
     gboolean changed = FALSE;
     GList *list = clip_history_get_list(clipboard->history);
@@ -220,24 +220,24 @@ gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry)
 
 
 
-ClipboardEntry* clip_clipboard_get(Clipboard* clipboard)
+ClipboardEntry* clip_clipboard_get(Clipboard *clipboard)
 {
     return clip_clipboard_entry_clone(clipboard->current);
 }
 
-ClipboardEntry* clip_clipboard_get_head(Clipboard* clipboard)
+ClipboardEntry* clip_clipboard_get_head(Clipboard *clipboard)
 {
     return clip_history_get_head(clipboard->history);;
 }
 
-gboolean clip_clipboard_is_head(Clipboard* clipboard, ClipboardEntry* entry)
+gboolean clip_clipboard_is_head(Clipboard *clipboard, ClipboardEntry *entry)
 {
-	return clip_clipboard_entry_equals(entry, clipboard->current);
+    return clip_clipboard_entry_equals(entry, clipboard->current);
 }
 
 
 
-TrimMode clip_clipboard_next_trim_mode(Clipboard* clipboard)
+TrimMode clip_clipboard_next_trim_mode(Clipboard *clipboard)
 {
     clipboard->trim_mode++;
     if(clipboard->trim_mode >= TRIM_STOP){
@@ -246,7 +246,7 @@ TrimMode clip_clipboard_next_trim_mode(Clipboard* clipboard)
     return clipboard->trim_mode;
 }
 
-TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard)
+TrimMode clip_clipboard_get_trim_mode(Clipboard *clipboard)
 {
     return clipboard->trim_mode;
 }
@@ -265,7 +265,7 @@ gboolean clip_clipboard_remove(Clipboard *clipboard, ClipboardEntry *entry)
 
 
 
-gboolean clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry)
+gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry)
 {
     if(clip_history_toggle_lock(clipboard->history, entry)){
         clip_clipboard_entry_set_locked(entry, !clip_clipboard_entry_get_locked(entry));
@@ -277,7 +277,7 @@ gboolean clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry)
 
 
 
-void clip_clipboard_clear(Clipboard* clipboard)
+void clip_clipboard_clear(Clipboard *clipboard)
 {
     clip_history_clear(clipboard->history);
     clip_provider_clear(clipboard->provider);
@@ -289,12 +289,12 @@ void clip_clipboard_clear(Clipboard* clipboard)
 
 
 
-gboolean clip_clipboard_is_enabled(Clipboard* clipboard)
+gboolean clip_clipboard_is_enabled(Clipboard *clipboard)
 {
     return clipboard->enabled;
 }
 
-gboolean clip_clipboard_toggle_history(Clipboard* clipboard)
+gboolean clip_clipboard_toggle_history(Clipboard *clipboard)
 {
     trace("Toggling clipboard.\n");
     clipboard->enabled = !clip_clipboard_is_enabled(clipboard);
@@ -304,12 +304,12 @@ gboolean clip_clipboard_toggle_history(Clipboard* clipboard)
 
 
 
-void clip_clipboard_enable_history(Clipboard* clipboard)
+void clip_clipboard_enable_history(Clipboard *clipboard)
 {
     clipboard->enabled = TRUE;
 }
 
-void clip_clipboard_disable_history(Clipboard* clipboard)
+void clip_clipboard_disable_history(Clipboard *clipboard)
 {
     clipboard->enabled = FALSE;
 }
@@ -317,12 +317,12 @@ void clip_clipboard_disable_history(Clipboard* clipboard)
 
 
 
-GList* clip_clipboard_get_history(Clipboard* clipboard)
+GList* clip_clipboard_get_history(Clipboard *clipboard)
 {
     return clip_history_get_list(clipboard->history);
 }
 
-void clip_clipboard_free_history(GList* history)
+void clip_clipboard_free_history(GList *history)
 {
     clip_history_free_list(history);
 }

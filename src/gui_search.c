@@ -23,7 +23,7 @@
 #include <gtk/gtk.h>
 
 
-static GString* search_term;
+static GString *search_term;
 static int position;
 
 /**

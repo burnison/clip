@@ -24,18 +24,18 @@
 typedef struct history ClipboardHistory;
 
 ClipboardHistory* clip_history_new(void);
-void clip_history_free(ClipboardHistory* history);
+void clip_history_free(ClipboardHistory *history);
 
-gboolean clip_history_prepend(ClipboardHistory* history, ClipboardEntry* entry);
-gboolean clip_history_update(ClipboardHistory* history, ClipboardEntry* entry);
+gboolean clip_history_prepend(ClipboardHistory *history, ClipboardEntry *entry);
+gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry);
 
-gboolean clip_history_remove(ClipboardHistory* history, ClipboardEntry* entry);
-gboolean clip_history_remove_head(ClipboardHistory* history);
+gboolean clip_history_remove(ClipboardHistory *history, ClipboardEntry *entry);
+gboolean clip_history_remove_head(ClipboardHistory *history);
 
-gboolean clip_history_toggle_lock(ClipboardHistory* history, ClipboardEntry* entry);
+gboolean clip_history_toggle_lock(ClipboardHistory *history, ClipboardEntry *entry);
 
-void clip_history_clear(ClipboardHistory* history);
+void clip_history_clear(ClipboardHistory *history);
 
-GList* clip_history_get_list(ClipboardHistory* history);
-ClipboardEntry* clip_history_get_head(ClipboardHistory* history);
-void clip_history_free_list(GList* list);
+GList* clip_history_get_list(ClipboardHistory *history);
+ClipboardEntry* clip_history_get_head(ClipboardHistory *history);
+void clip_history_free_list(GList *list);

@@ -24,19 +24,19 @@
 #include <gtk/gtk.h>
 
 struct widgets {
-    GtkDialog* dialog;
-    GtkTextBuffer* buffer;
+    GtkDialog *dialog;
+    GtkTextBuffer *buffer;
 };
 
-static void clip_gui_editor_create_dialog(struct widgets* widgets, char* text)
+static void clip_gui_editor_create_dialog(struct widgets *widgets, char *text)
 {
     // Create the textbox and buffer.
-    GtkWidget* textbox = gtk_text_view_new();
-    GtkTextBuffer* buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textbox));
+    GtkWidget *textbox = gtk_text_view_new();
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textbox));
     gtk_text_buffer_set_text(buffer, text == NULL ? "" : text, -1);
 
     // Set-up the dialog box.
-    GtkWidget* dialog = gtk_dialog_new_with_buttons(PROGRAM, NULL, GTK_DIALOG_MODAL,
+    GtkWidget *dialog = gtk_dialog_new_with_buttons(PROGRAM, NULL, GTK_DIALOG_MODAL,
             GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
             GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
             NULL);
@@ -44,7 +44,7 @@ static void clip_gui_editor_create_dialog(struct widgets* widgets, char* text)
     gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 400);
 
     // Add the textbox to the dialog.
-    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     gtk_box_pack_start(GTK_BOX(content), textbox, TRUE, TRUE, 0);
 
     // Populate.
@@ -53,7 +53,7 @@ static void clip_gui_editor_create_dialog(struct widgets* widgets, char* text)
 }
 
 
-char* clip_gui_editor_edit_text(char* text)
+char* clip_gui_editor_edit_text(char *text)
 {
     struct widgets ui = {0};
     clip_gui_editor_create_dialog(&ui, text);
@@ -61,7 +61,7 @@ char* clip_gui_editor_edit_text(char* text)
     gtk_widget_show_all(GTK_WIDGET(ui.dialog));
     gint result = gtk_dialog_run(ui.dialog);
 
-    char* edited = NULL;
+    char *edited = NULL;
     if(result == GTK_RESPONSE_ACCEPT){
         GtkTextIter start, end;
         gtk_text_buffer_get_bounds(ui.buffer, &start, &end);
@@ -76,7 +76,7 @@ char* clip_gui_editor_edit_text(char* text)
     return edited;
 }
 
-void clip_gui_editor_free_text(char* text)
+void clip_gui_editor_free_text(char *text)
 {
     g_free(text);
 }

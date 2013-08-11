@@ -28,7 +28,7 @@
 
 static gboolean clip_main_init(void)
 {
-    const char* directory = clip_config_get_home_dir();
+    const char *directory = clip_config_get_home_dir();
     if(g_file_test(directory, G_FILE_TEST_EXISTS)){
         if(!g_file_test(directory, G_FILE_TEST_IS_DIR)){
             warn("Application directory, %s exists, but is a normal file.", directory);
@@ -41,7 +41,7 @@ static gboolean clip_main_init(void)
 }
 
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     debug("Starting up.\n");
     if(!clip_main_init()){
@@ -51,10 +51,10 @@ int main(int argc, char** argv)
 
     gtk_init(&argc, &argv);
 
-    ClipboardProvider* provider = clip_provider_new();
-    Clipboard* clipboard = clip_clipboard_new(provider);
+    ClipboardProvider *provider = clip_provider_new();
+    Clipboard *clipboard = clip_clipboard_new(provider);
 
-    Daemon* daemon = clip_daemon_new(provider, clipboard);
+    Daemon *daemon = clip_daemon_new(provider, clipboard);
     clip_daemon_start(daemon);
 
     clip_gui_init(clipboard);

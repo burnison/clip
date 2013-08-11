@@ -25,15 +25,15 @@
 
 
 struct daemon {
-    ClipboardProvider* provider;
-    Clipboard* clipboard;
+    ClipboardProvider *provider;
+    Clipboard *clipboard;
 };
 
 
 /**
  * @param daemon the GTK callback user data.
  */
-static gboolean clip_daemon_poll(Daemon* daemon)
+static gboolean clip_daemon_poll(Daemon *daemon)
 {
     // If the clipboard isn't enabled, don't bother looking.
     if(!clip_clipboard_is_enabled(daemon->clipboard)){
@@ -55,13 +55,13 @@ static gboolean clip_daemon_poll(Daemon* daemon)
 
 
 
-static void clip_daemon_restart(Daemon* daemon)
+static void clip_daemon_restart(Daemon *daemon)
 {
     debug("Daemon apparently dead. Restarting.\n");
     clip_daemon_start(daemon);
 }
 
-void clip_daemon_start(Daemon* daemon)
+void clip_daemon_start(Daemon *daemon)
 {
     trace("Creating daemon task.\n");
     g_timeout_add_full(G_PRIORITY_DEFAULT, DAEMON_REFRESH_INTERVAL,
@@ -70,16 +70,16 @@ void clip_daemon_start(Daemon* daemon)
 
 
 
-Daemon* clip_daemon_new(ClipboardProvider* provider, Clipboard* clipboard)
+Daemon* clip_daemon_new(ClipboardProvider *provider, Clipboard *clipboard)
 {
     trace("Initializing daemon.\n");
-    Daemon* daemon = g_malloc(sizeof(Daemon));
+    Daemon *daemon = g_malloc(sizeof(Daemon));
     daemon->provider = provider;
     daemon->clipboard = clipboard;
     return daemon;
 }
 
-void clip_daemon_free(Daemon* daemon)
+void clip_daemon_free(Daemon *daemon)
 {
     daemon->clipboard = NULL;
     daemon->provider = NULL;

@@ -17,5 +17,5 @@
  * along with Clip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-char* clip_gui_editor_edit_text(char* text);
-void clip_gui_editor_free_text(char* text);
+char* clip_gui_editor_edit_text(char *text);
+void clip_gui_editor_free_text(char *text);

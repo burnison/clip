@@ -24,23 +24,23 @@
 #include <string.h>
 
 struct provider {
-	GtkClipboard* clipboard;
-	GtkClipboard* primary;
-    char* current;
+    GtkClipboard *clipboard;
+    GtkClipboard *primary;
+    char *current;
     gboolean ownership_transferred;
     gboolean locked;
 };
 
 
-static void clip_provider_unlock(ClipboardProvider* provider)
+static void clip_provider_unlock(ClipboardProvider *provider)
 {
     provider->locked = FALSE;
 }
 
 
-void clip_provider_cb_owner_changed(GtkClipboard* clipboard, GdkEvent* event, gpointer data)
+void clip_provider_cb_owner_changed(GtkClipboard *clipboard, GdkEvent *event, gpointer data)
 {
-	if(((GdkEventOwnerChange*)event)->reason != GDK_OWNER_CHANGE_NEW_OWNER) {
+    if(((GdkEventOwnerChange*)event)->reason != GDK_OWNER_CHANGE_NEW_OWNER) {
         debug("Clipboard owner has been destroyed. Going to ignore next value if null.\n");
         ((ClipboardProvider*)data)->ownership_transferred = TRUE;
     }
@@ -48,21 +48,20 @@ void clip_provider_cb_owner_changed(GtkClipboard* clipboard, GdkEvent* event, gp
 
 ClipboardProvider* clip_provider_new(void)
 {
-	ClipboardProvider* provider = g_malloc(sizeof(ClipboardProvider));
-	provider->clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-	provider->primary = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
+    ClipboardProvider *provider = g_malloc(sizeof(ClipboardProvider));
+    provider->clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    provider->primary = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
     provider->current = NULL;
     provider->ownership_transferred = FALSE;
     provider->locked = FALSE;
 
     g_signal_connect(G_OBJECT(provider->primary), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
-    g_signal_connect(G_OBJECT(provider->clipboard), "owner-change",
-            G_CALLBACK(clip_provider_cb_owner_changed), provider);
+    g_signal_connect(G_OBJECT(provider->clipboard), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
 
-	return provider;
+    return provider;
 }
 
-void clip_provider_free(ClipboardProvider* provider)
+void clip_provider_free(ClipboardProvider *provider)
 {
     if(provider == NULL){
         return;
@@ -77,7 +76,7 @@ void clip_provider_free(ClipboardProvider* provider)
     g_free(provider->current);
     provider->current = NULL;
 
-	g_free(provider);
+    g_free(provider);
 }
 
 
@@ -89,7 +88,7 @@ void clip_provider_free(ClipboardProvider* provider)
  * serves as a primitive mutex on the provider.
  * @return TRUE if the lock has been acquired, FALSE otherwise.
  */
-static gboolean clip_provider_lock(ClipboardProvider* provider)
+static gboolean clip_provider_lock(ClipboardProvider *provider)
 {
     if(provider->locked){
         return FALSE;
@@ -105,9 +104,9 @@ static gboolean clip_provider_lock(ClipboardProvider* provider)
  */
 static gboolean clip_provider_is_provider_ready()
 {
-    GdkWindow* root_window = gdk_get_default_root_window();
-    GdkDeviceManager* device_manager = gdk_display_get_device_manager(gdk_display_get_default());
-    GdkDevice* pointer = gdk_device_manager_get_client_pointer(device_manager);
+    GdkWindow *root_window = gdk_get_default_root_window();
+    GdkDeviceManager *device_manager = gdk_display_get_device_manager(gdk_display_get_default());
+    GdkDevice *pointer = gdk_device_manager_get_client_pointer(device_manager);
     GdkModifierType modifiers = {0};
 
     gdk_window_get_device_position(root_window, pointer, NULL, NULL, &modifiers);
@@ -123,16 +122,16 @@ static gboolean clip_provider_is_provider_ready()
  * the same string), the current selection is unhilighted. As such, only swap the two values if they are actually
  * different, textually.
  */
-static void clip_provider_set_if_different(GtkClipboard* clipboard, char* new)
+static void clip_provider_set_if_different(GtkClipboard *clipboard, char *new)
 {
-    char* old = gtk_clipboard_wait_for_text(clipboard);
-	if(g_strcmp0(old, new)){
-		gtk_clipboard_set_text(clipboard, new == NULL ? "" : new, -1);
-	}
+    char *old = gtk_clipboard_wait_for_text(clipboard);
+    if(g_strcmp0(old, new)){
+        gtk_clipboard_set_text(clipboard, new == NULL ? "" : new, -1);
+    }
     g_free(old);
 }
 
-static char* clip_provider_prepare_value(ClipboardProvider* provider, char* text)
+static char* clip_provider_prepare_value(ClipboardProvider *provider, char *text)
 {
     if(provider->ownership_transferred){
         provider->ownership_transferred = FALSE;
@@ -147,27 +146,27 @@ static char* clip_provider_prepare_value(ClipboardProvider* provider, char* text
 /**
  * Sets the provider clipboards to a copy of the specified value.
  */
-void clip_provider_set_current(ClipboardProvider* provider, char* text)
+void clip_provider_set_current(ClipboardProvider *provider, char *text)
 {
     if(!clip_provider_is_provider_ready()){
         return;
     }
 
-    char* copy = clip_provider_prepare_value(provider, text);
+    char *copy = clip_provider_prepare_value(provider, text);
     if(!clip_provider_lock(provider)){
         g_free(copy);
         return;
     }
-	clip_provider_set_if_different(provider->clipboard, copy);
-	clip_provider_set_if_different(provider->primary, copy);
+    clip_provider_set_if_different(provider->clipboard, copy);
+    clip_provider_set_if_different(provider->primary, copy);
     clip_provider_unlock(provider);
 
-    char* old = provider->current;
+    char *old = provider->current;
     provider->current = copy;
     g_free(old);
 }
 
-void clip_provider_clear(ClipboardProvider* provider)
+void clip_provider_clear(ClipboardProvider *provider)
 {
     if(!clip_provider_lock(provider)){
         return;
@@ -185,42 +184,42 @@ void clip_provider_clear(ClipboardProvider* provider)
 /**
  * Syncs the two provider clipboards and sets the provider's current value to match that of the synced value.
  */
-static void clip_provider_sync_clipboards(ClipboardProvider* provider)
+static void clip_provider_sync_clipboards(ClipboardProvider *provider)
 {
     if(!clip_provider_lock(provider)){
         return;
     }
-	char* on_clipboard = gtk_clipboard_wait_for_text(provider->clipboard);
-	char* on_primary = gtk_clipboard_wait_for_text(provider->primary);
+    char *on_clipboard = gtk_clipboard_wait_for_text(provider->clipboard);
+    char *on_primary = gtk_clipboard_wait_for_text(provider->primary);
     clip_provider_unlock(provider);
 
-	char* selection = on_clipboard;
+    char *selection = on_clipboard;
 
     // Check if the primary even has content.
-	if(on_primary != NULL && strlen(on_primary) > 0){
+    if(on_primary != NULL && strlen(on_primary) > 0){
         // Check if primary is different from clipboard. If it is, then make sure that it's the primary that changed and
         // not clipboard by comparing clipboard to "current".
         if(g_strcmp0(on_primary, on_clipboard) && !g_strcmp0(on_clipboard, provider->current)){
             // Primary definitely changed. Use it.
             selection = on_primary;
         }
-	}
+    }
     clip_provider_set_current(provider, selection);
-	g_free(on_clipboard);
-	g_free(on_primary);
+    g_free(on_clipboard);
+    g_free(on_primary);
 }
 
 /**
  * Returns a copy of the current system clipboard.
  */
-char* clip_provider_get_current(ClipboardProvider* provider)
+char* clip_provider_get_current(ClipboardProvider *provider)
 {
     clip_provider_sync_clipboards(provider);
 
-	return g_strdup(provider->current);
+    return g_strdup(provider->current);
 }
 
-void clip_provider_free_current(char* current)
+void clip_provider_free_current(char *current)
 {
-	g_free(current);
+    g_free(current);
 }

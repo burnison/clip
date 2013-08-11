@@ -29,37 +29,37 @@ typedef enum { TRIM_OFF, TRIM_CHOMP, TRIM_CHUG, TRIM_STRIP,     TRIM_STOP } Trim
 
 typedef struct clipboard Clipboard; 
 
-Clipboard* clip_clipboard_new(ClipboardProvider* provider);
-void clip_clipboard_free(Clipboard* clipboard);
+Clipboard* clip_clipboard_new(ClipboardProvider *provider);
+void clip_clipboard_free(Clipboard *clipboard);
 
 
 /**
  * Gets a copy of the current clipboard's contents. This copy must be
  * freed when no longer used.
  */
-ClipboardEntry* clip_clipboard_get(Clipboard* clipboard);
+ClipboardEntry* clip_clipboard_get(Clipboard *clipboard);
 /**
  * Gets a copy of the clipboard's inactive contents. This copy must be
  * freed whe no longer in use.
  */
-ClipboardEntry* clip_clipboard_get_head(Clipboard* clipboard);
+ClipboardEntry* clip_clipboard_get_head(Clipboard *clipboard);
 /**
  * Identifies if the specified entry is the current entry of the clipboard.
  */
-gboolean clip_clipboard_is_head(Clipboard* clipboard, ClipboardEntry* entry);
+gboolean clip_clipboard_is_head(Clipboard *clipboard, ClipboardEntry *entry);
 
 
 /**
  * Sets the clipboard's current value to a copy of the current entry. This has
  * the same characteristics as set_new.
  */
-void clip_clipboard_set(Clipboard* clipboard, ClipboardEntry* entry);
+void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry);
 /**
  * Sets the clipboards current value to a copy of the specified text. If text is
  * NULL, the current clipboard value, along with its associated history entry,
  * are purged.
  */
-void clip_clipboard_set_new(Clipboard* clipboard, char* text);
+void clip_clipboard_set_new(Clipboard *clipboard, char *text);
 
 
 /**
@@ -74,7 +74,7 @@ gboolean clip_clipboard_replace(Clipboard *clipboard, ClipboardEntry *entry);
 /**
  * Clear the clipboard.
  */
-void clip_clipboard_clear(Clipboard* clipboard);
+void clip_clipboard_clear(Clipboard *clipboard);
 
 
 
@@ -88,18 +88,18 @@ gboolean clip_clipboard_join(Clipboard *clipboard, ClipboardEntry *left);
 gboolean clip_clipboard_trim(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry);
-gboolean clip_clipboard_toggle_lock(Clipboard* clipboard, ClipboardEntry* entry);
+gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry);
 
 
-gboolean clip_clipboard_is_enabled(Clipboard* clipboard);
-gboolean clip_clipboard_toggle_history(Clipboard* clipboard);
-void clip_clipboard_enable_history(Clipboard* clipboard);
-void clip_clipboard_disable_history(Clipboard* clipboard);
+gboolean clip_clipboard_is_enabled(Clipboard *clipboard);
+gboolean clip_clipboard_toggle_history(Clipboard *clipboard);
+void clip_clipboard_enable_history(Clipboard *clipboard);
+void clip_clipboard_disable_history(Clipboard *clipboard);
 
 
-TrimMode clip_clipboard_next_trim_mode(Clipboard* clipboard);
-TrimMode clip_clipboard_get_trim_mode(Clipboard* clipboard);
+TrimMode clip_clipboard_next_trim_mode(Clipboard *clipboard);
+TrimMode clip_clipboard_get_trim_mode(Clipboard *clipboard);
 
 
-GList* clip_clipboard_get_history(Clipboard* clipboard);
-void clip_clipboard_free_history(GList* history);
+GList* clip_clipboard_get_history(Clipboard *clipboard);
+void clip_clipboard_free_history(GList *history);

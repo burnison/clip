@@ -19,8 +19,8 @@
 
 #include "utils.h"
 
-static char* home;
-static char* storage;
+static char *home;
+static char *storage;
 
 // Freed by destroy.
 const char* clip_config_get_home_dir(void)

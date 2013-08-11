@@ -22,15 +22,15 @@
 
 struct clipboard_entry {
     uint64_t id;
-    char* text;
+    char *text;
     gboolean locked;
     unsigned int count;
 };
 
 
-ClipboardEntry* clip_clipboard_entry_new(int64_t id, char* text, gboolean locked, unsigned int count)
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count)
 {
-    ClipboardEntry* entry = g_malloc(sizeof(ClipboardEntry));
+    ClipboardEntry *entry = g_malloc(sizeof(ClipboardEntry));
     entry->id = id;
     entry->text = g_strdup(text);
     entry->locked = locked;
@@ -38,7 +38,7 @@ ClipboardEntry* clip_clipboard_entry_new(int64_t id, char* text, gboolean locked
     return entry;
 }
 
-ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry)
+ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry *entry)
 {
     if(entry == NULL){
         return NULL;
@@ -46,7 +46,7 @@ ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry* entry)
     return clip_clipboard_entry_new(entry->id, entry->text, entry->locked, entry->count);
 }
 
-void clip_clipboard_entry_free(ClipboardEntry* entry)
+void clip_clipboard_entry_free(ClipboardEntry *entry)
 {
     if(entry == NULL){
         return;
@@ -56,12 +56,12 @@ void clip_clipboard_entry_free(ClipboardEntry* entry)
 }
 
 
-gboolean clip_clipboard_entry_is_new(ClipboardEntry* entry)
+gboolean clip_clipboard_entry_is_new(ClipboardEntry *entry)
 {
     return entry->id == 0;
 }
 
-char* clip_clipboard_entry_get_text(ClipboardEntry* entry)
+char* clip_clipboard_entry_get_text(ClipboardEntry *entry)
 {
     if(entry == NULL){
         return NULL;
@@ -70,17 +70,17 @@ char* clip_clipboard_entry_get_text(ClipboardEntry* entry)
     return entry->text;
 }
 
-void clip_clipboard_entry_set_text(ClipboardEntry* entry, char* text)
+void clip_clipboard_entry_set_text(ClipboardEntry *entry, char *text)
 {
     if(entry == NULL){
         return;
     }
-    char* old_text = entry->text;
+    char *old_text = entry->text;
     entry->text = g_strdup(text);
     g_free(old_text);
 }
 
-uint64_t clip_clipboard_entry_get_id(ClipboardEntry* entry)
+uint64_t clip_clipboard_entry_get_id(ClipboardEntry *entry)
 {
     if(entry == NULL){
         return 0;
@@ -88,12 +88,12 @@ uint64_t clip_clipboard_entry_get_id(ClipboardEntry* entry)
     return entry->id;
 }
 
-void clip_clipboard_entry_set_id(ClipboardEntry* entry, uint64_t id)
+void clip_clipboard_entry_set_id(ClipboardEntry *entry, uint64_t id)
 {
     entry->id = id;
 }
 
-unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry)
+unsigned int clip_clipboard_entry_get_count(ClipboardEntry *entry)
 {
     if(entry == NULL){
         return -1;
@@ -102,26 +102,26 @@ unsigned int clip_clipboard_entry_get_count(ClipboardEntry* entry)
 }
 
 
-gboolean clip_clipboard_entry_get_locked(ClipboardEntry* entry)
+gboolean clip_clipboard_entry_get_locked(ClipboardEntry *entry)
 {
     if(entry == NULL){
         return FALSE;
     }
     return entry->locked;
 }
-void clip_clipboard_entry_set_locked(ClipboardEntry* entry, gboolean locked)
+void clip_clipboard_entry_set_locked(ClipboardEntry *entry, gboolean locked)
 {
     entry->locked = locked;
 }
 
 
 
-gboolean clip_clipboard_entry_equals(ClipboardEntry* a, ClipboardEntry* b)
+gboolean clip_clipboard_entry_equals(ClipboardEntry *a, ClipboardEntry *b)
 {
-	if(a == b) {
-		return TRUE;
-	} else if(a == NULL || b == NULL) {
-		return FALSE;
-	}
-	return a->id == b->id || !g_strcmp0(a->text, b->text);
+    if(a == b) {
+        return TRUE;
+    } else if(a == NULL || b == NULL) {
+        return FALSE;
+    }
+    return a->id == b->id || !g_strcmp0(a->text, b->text);
 }
