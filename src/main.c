@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     ClipboardProvider *provider = clip_provider_new();
     Clipboard *clipboard = clip_clipboard_new(provider);
 
-    Daemon *daemon = clip_daemon_new(provider, clipboard);
+    Daemon *daemon = clip_daemon_new(clipboard);
     clip_daemon_start(daemon);
 
     clip_gui_init(clipboard);

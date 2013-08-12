@@ -30,6 +30,7 @@ struct clipboard {
     ClipboardProvider *provider;
     ClipboardHistory *history;
     ClipboardEntry *current;
+    char *current_text;
     TrimMode trim_mode;
     gboolean enabled;
 };
@@ -45,6 +46,7 @@ Clipboard* clip_clipboard_new(ClipboardProvider *provider)
     clipboard->history = clip_history_new();
     clipboard->enabled = TRUE;
     clipboard->current = NULL;
+    clipboard->current_text = NULL;
     clipboard->trim_mode = DEFAULT_TRIM_MODE;
 
     clip_events_add_observer(clip_clipboard_on_event);
@@ -62,6 +64,8 @@ void clip_clipboard_free(Clipboard *clipboard)
     clip_clipboard_entry_free(clipboard->current);
     clipboard->current = NULL;
     clipboard->provider = NULL;
+    g_free(clipboard->current_text);
+    clipboard->current_text = NULL;
     g_free(clipboard);
 }
 
@@ -180,6 +184,10 @@ void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry)
     clipboard->current = clip_clipboard_entry_clone(entry);
     clip_clipboard_entry_free(existing);
 
+    char *existing_text = clipboard->current_text;
+    clipboard->current_text = g_strdup(clean_new);
+    g_free(existing_text);
+
     if(clip_clipboard_is_enabled(clipboard)){
         if(new == NULL){
             debug("New clipboard contents are null (probably a request to clear the clipboard). Removing head.\n");
@@ -271,9 +279,23 @@ ClipboardEntry* clip_clipboard_get_head(Clipboard *clipboard)
 
 gboolean clip_clipboard_is_head(Clipboard *clipboard, ClipboardEntry *entry)
 {
-    return clip_clipboard_entry_equals(entry, clipboard->current);
+    return !g_strcmp0(clip_clipboard_entry_get_text(clipboard->current), clip_clipboard_entry_get_text(entry));
 }
 
+gboolean clip_clipboard_is_synced_with_provider(Clipboard *clipboard)
+{
+    char *provider_contents = clip_provider_get_current(clipboard->provider);
+    gboolean synced = !g_strcmp0(clipboard->current_text, provider_contents);
+    clip_provider_free_current(provider_contents);
+    return synced;
+}
+
+void clip_clipboard_sync_with_provider(Clipboard *clipboard)
+{
+    char *provider_contents = clip_provider_get_current(clipboard->provider);
+    clip_clipboard_set_new(clipboard, provider_contents);
+    clip_provider_free_current(provider_contents);
+}
 
 
 TrimMode clip_clipboard_next_trim_mode(Clipboard *clipboard)

@@ -25,31 +25,18 @@
 
 
 struct daemon {
-    ClipboardProvider *provider;
     Clipboard *clipboard;
 };
 
 
-/**
- * @param daemon the GTK callback user data.
- */
 static gboolean clip_daemon_poll(Daemon *daemon)
 {
-    // If the clipboard isn't enabled, don't bother looking.
-    if(!clip_clipboard_is_enabled(daemon->clipboard)){
-        return TRUE;
+    if(clip_clipboard_is_enabled(daemon->clipboard)){
+        if(!clip_clipboard_is_synced_with_provider(daemon->clipboard)){
+            trace("Provider clipboard contents differ from active clipboard.\n");
+            clip_clipboard_sync_with_provider(daemon->clipboard);
+        }
     }
-
-    ClipboardEntry *clipboard_entry = clip_clipboard_get(daemon->clipboard);
-    char *clipboard_contents = clip_clipboard_entry_get_text(clipboard_entry);
-    char *provider_contents = clip_provider_get_current(daemon->provider);
-    if(g_strcmp0(clipboard_contents, provider_contents)){
-        trace("Provider clipboard contents differ from active clipboard.\n");
-        clip_clipboard_set_new(daemon->clipboard, provider_contents);
-    }
-
-    clip_provider_free_current(provider_contents);
-    clip_clipboard_entry_free(clipboard_entry);
     return TRUE;
 }
 
@@ -70,11 +57,10 @@ void clip_daemon_start(Daemon *daemon)
 
 
 
-Daemon* clip_daemon_new(ClipboardProvider *provider, Clipboard *clipboard)
+Daemon* clip_daemon_new(Clipboard *clipboard)
 {
     trace("Initializing daemon.\n");
     Daemon *daemon = g_malloc(sizeof(Daemon));
-    daemon->provider = provider;
     daemon->clipboard = clipboard;
     return daemon;
 }
@@ -82,6 +68,5 @@ Daemon* clip_daemon_new(ClipboardProvider *provider, Clipboard *clipboard)
 void clip_daemon_free(Daemon *daemon)
 {
     daemon->clipboard = NULL;
-    daemon->provider = NULL;
     g_free(daemon);
 }

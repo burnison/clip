@@ -48,6 +48,9 @@ ClipboardEntry* clip_clipboard_get_head(Clipboard *clipboard);
  */
 gboolean clip_clipboard_is_head(Clipboard *clipboard, ClipboardEntry *entry);
 
+gboolean clip_clipboard_is_synced_with_provider(Clipboard *clipboard);
+void clip_clipboard_sync_with_provider(Clipboard *clipboard);
+
 
 /**
  * Sets the clipboard's current value to a copy of the current entry. This has
