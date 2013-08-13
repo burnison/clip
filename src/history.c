@@ -444,19 +444,19 @@ static ClipboardEntry* clip_history_get_by_text(ClipboardHistory *history, char 
  */
 static int levenshtein_distance(const char *s, const char *t)
 {
-    int ls = strlen(s);
-    int lt = strlen(t);
-    int d[ls + 1][lt + 1];
+    int ls = MIN(1024, strlen(s));
+    int lt = MIN(1024, strlen(t));
+    int *d = g_malloc((ls + 1) * (lt + 1) * sizeof(int));
     for (int i = 0; i <= ls; i++){
         for (int j = 0; j <= lt; j++){
-            d[i][j] = -1;
+            d[i*j+j] = -1;
         }
     }
 
     int dist(int i, int j)
     {
-        if (d[i][j] >= 0){
-            return d[i][j];
+        if (d[i*j+j] >= 0){
+            return d[i*j+j];
         }
 
         int x;
@@ -477,7 +477,9 @@ static int levenshtein_distance(const char *s, const char *t)
             }
             x++;
         }
-        return d[i][j] = x;
+        return d[i*j+j] = x;
     }
-    return dist(0, 0);
+    int distance = dist(0, 0);
+    g_free(d);
+    return distance;
 }
