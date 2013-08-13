@@ -460,7 +460,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
                 clip_gui_join(selected_menu_item);
                 update_required = FALSE;
                 break;
-            case GDK_KEY_l:
+            case GDK_KEY_L:
                 clip_gui_lock(selected_menu_item);
                 break;
             case GDK_KEY_u:

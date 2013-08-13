@@ -29,7 +29,7 @@ Locking History Entries
 -----------------------
 
 Clip supports the ability to lock history items, effectively making them immutable to deletion. Right clicking on a
-history item or pressing "l" when an item is selected will toggle its lock mode. Menu items displayed in a bold text are
+history item or pressing "L" when an item is selected will toggle its lock mode. Menu items displayed in a bold text are
 locked.
 
 Clearing History
