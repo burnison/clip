@@ -46,12 +46,6 @@
 #define SIMILARITY_REPLACEMENT_LIMIT 15
 
 /**
- * Similarity is currently determined using a levenshtein distance. Values with
- * a difference less than this value will be considered the same.
- */
-#define SIMILARITY_THRESHOLD 3
-
-/**
  * The key to press to enter search mode.
  */
 #define GUI_SEARCH_LEADER '/'

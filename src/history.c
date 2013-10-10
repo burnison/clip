@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sqlite3.h>
+#include <math.h>
 
 
 #define HISTORY_CREATE "CREATE TABLE IF NOT EXISTS history(" \
@@ -376,6 +377,19 @@ exit:
     return head;
 }
 
+
+static gboolean clip_history_levenshtein_similar(char *left, char *right) {
+    int distance = levenshtein_distance(left, right);
+    int shortest = MIN(strlen(left), strlen(right));
+    // Magic numbers. These are an arbitrary crapshoot, anyways.
+    int threshold = shortest / 100 + 3;
+    if(distance < threshold){
+        trace("Distance of [%s] and [%s] is %d.\n", left, right, distance);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEntry *entry, int limit_scan)
 {
     if(limit_scan < 1){
@@ -393,6 +407,7 @@ ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEnt
 
     int i = 0;
     while(i < limit_scan && next != NULL){
+        // If this is the same entry, skip it.
         ClipboardEntry *next_entry = next->data;
         if(clip_clipboard_entry_equals(entry, next_entry)){
             goto next;
@@ -404,9 +419,8 @@ ClipboardEntry* clip_history_get_similar(ClipboardHistory *history, ClipboardEnt
             goto exit;
         }
 
-        int distance = levenshtein_distance(left, right);
-        if(distance < SIMILARITY_THRESHOLD){
-            trace("Distance of [%s] and [%s] is %d.\n", left, right, distance);
+        gboolean found_similar = clip_history_levenshtein_similar(left, right);
+        if(found_similar){
             matching = clip_clipboard_entry_clone(next_entry);
             break;
         }
@@ -439,7 +453,7 @@ static ClipboardEntry* clip_history_get_by_text(ClipboardHistory *history, char 
     return entry;
 }
 
-/** 
+/**
  * No author specified. See http://rosettacode.org/wiki/Levenshtein_distance#C.
  */
 static int levenshtein_distance(const char *s, const char *t)
