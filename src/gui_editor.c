@@ -22,6 +22,7 @@
 #include "utils.h"
 
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>
 
 struct widgets {
     GtkDialog *dialog;
@@ -37,8 +38,8 @@ static void clip_gui_editor_create_dialog(struct widgets *widgets, char *text)
 
     // Set-up the dialog box.
     GtkWidget *dialog = gtk_dialog_new_with_buttons(PROGRAM, NULL, GTK_DIALOG_MODAL,
-            GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
-            GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
+            _("OK"), GTK_RESPONSE_ACCEPT,
+            _("CANCEL"), GTK_RESPONSE_REJECT,
             NULL);
     gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
     gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 400);
