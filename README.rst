@@ -118,7 +118,7 @@ At runtime, Clip is able to use one of four whitespace trimming strategies:
 
 These strategies may be changed by selecting the "Trim" menu item, which indicates its active mode. This feature is
 non-destructive and will not change the source data. Keep in mind that when enabled, this feature may result in the
-primary clipboard selection to become unselected in some applications (such as rxvt).
+primary clipboard selection to become unselected in some applications (such as rxvt) iff Clip is compiled with syncing.
 
 Similarity Detection
 --------------------

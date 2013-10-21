@@ -28,7 +28,15 @@
 #define DAEMON_REFRESH_INTERVAL 500
 
 /**
- * The default auto-trim operation.
+ * If true, Clip will sync X11's primary and selection clipboards. While
+ * this is extremely useful, it results in a lot of noise.  Having used
+ * this feature for over 3 years, I've finally reverted to using a more
+ * convenient key mapping.
+ */
+#define SYNC_SELECTION 0
+
+/**
+ * The default auto-trim operation. This uses GLIB trim modes.
  */
 #define DEFAULT_TRIM_MODE TRIM_CHOMP
 
