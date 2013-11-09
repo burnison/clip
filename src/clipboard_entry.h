@@ -22,7 +22,7 @@
 
 typedef struct clipboard_entry ClipboardEntry;
 
-ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count);
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count, char tag);
 ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry *entry);
 void clip_clipboard_entry_free(ClipboardEntry *entry);
 
@@ -39,6 +39,9 @@ char* clip_clipboard_entry_get_text(ClipboardEntry *entry);
  * Change the entry's text.
  */
 void clip_clipboard_entry_set_text(ClipboardEntry *entry, char *text);
+
+char clip_clipboard_entry_get_tag(ClipboardEntry *entry);
+void clip_clipboard_entry_set_tag(ClipboardEntry *entry, char tag);
 
 unsigned int clip_clipboard_entry_get_count(ClipboardEntry *entry);
 

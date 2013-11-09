@@ -24,16 +24,18 @@ struct clipboard_entry {
     char *text;
     gboolean locked;
     unsigned int count;
+    char tag;
 };
 
 
-ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count)
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count, char tag)
 {
     ClipboardEntry *entry = g_malloc(sizeof(ClipboardEntry));
     entry->id = id;
     entry->text = g_strdup(text);
     entry->locked = locked;
     entry->count = count;
+    entry->tag = tag;
     return entry;
 }
 
@@ -42,7 +44,7 @@ ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry *entry)
     if(entry == NULL){
         return NULL;
     }
-    return clip_clipboard_entry_new(entry->id, entry->text, entry->locked, entry->count);
+    return clip_clipboard_entry_new(entry->id, entry->text, entry->locked, entry->count, entry->tag);
 }
 
 void clip_clipboard_entry_free(ClipboardEntry *entry)
@@ -78,6 +80,18 @@ void clip_clipboard_entry_set_text(ClipboardEntry *entry, char *text)
     entry->text = g_strdup(text);
     g_free(old_text);
 }
+
+
+char clip_clipboard_entry_get_tag(ClipboardEntry *entry)
+{
+    return entry->tag;
+}
+
+void clip_clipboard_entry_set_tag(ClipboardEntry *entry, char tag)
+{
+    entry->tag = tag;
+}
+
 
 uint64_t clip_clipboard_entry_get_id(ClipboardEntry *entry)
 {

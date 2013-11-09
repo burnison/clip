@@ -118,7 +118,7 @@ static gboolean clip_clipboard_different(char *new, char *old)
 
 void clip_clipboard_set_new(Clipboard *clipboard, char *text)
 {
-    ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0);
+    ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0, 0);
     clip_clipboard_set(clipboard, entry);
     clip_clipboard_entry_free(entry);
 }
@@ -330,12 +330,7 @@ gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry)
 {
     gboolean locked = clip_clipboard_entry_get_locked(entry);
     clip_clipboard_entry_set_locked(entry, !locked);
-    if(!clip_history_toggle_lock(clipboard->history, entry)){
-        // Update failed for some reason. Revert the estatus.
-        clip_clipboard_entry_set_locked(entry, locked);
-        return FALSE;
-    }
-    return TRUE;
+    return clip_history_update(clipboard->history, entry);
 }
 
 
