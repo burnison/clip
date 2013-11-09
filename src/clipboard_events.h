@@ -22,7 +22,7 @@
 
 #ifndef __CLIP_EVENTS_TYPES__
 #define __CLIP_EVENTS_TYPES__
-typedef enum {CLIPBOARD_ADD_EVENT, CLIPBOARD_REMOVE_EVENT, CLIPBOARD_UPDATE_EVENT} ClipboardEvent;
+typedef enum {CLIPBOARD_ADD_EVENT, CLIPBOARD_REMOVE_EVENT, CLIPBOARD_UPDATE_EVENT, CLIPBOARD_CLEAR_EVENT} ClipboardEvent;
 #endif
 
 void clip_events_add_observer(void (*clip_event_listener)(ClipboardEvent event, ClipboardEntry* entry));

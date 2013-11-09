@@ -41,6 +41,7 @@ char* clip_clipboard_entry_get_text(ClipboardEntry *entry);
 void clip_clipboard_entry_set_text(ClipboardEntry *entry, char *text);
 
 char clip_clipboard_entry_get_tag(ClipboardEntry *entry);
+void clip_clipboard_entry_remove_tag(ClipboardEntry *entry);
 void clip_clipboard_entry_set_tag(ClipboardEntry *entry, char tag);
 
 unsigned int clip_clipboard_entry_get_count(ClipboardEntry *entry);

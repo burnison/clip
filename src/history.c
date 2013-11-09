@@ -331,6 +331,8 @@ void clip_history_clear(ClipboardHistory *history)
     int status = sqlite3_exec(history->storage, HISTORY_CLEAR, NULL, NULL, NULL);
     if(SQLITE_OK != status){
         warn("Cannot truncate history table (error %d).\n", status);
+    } else {
+        clip_events_notify(CLIPBOARD_CLEAR_EVENT, NULL);
     }
     history->count -= sqlite3_changes(history->storage);
 }

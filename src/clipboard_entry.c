@@ -92,6 +92,11 @@ void clip_clipboard_entry_set_tag(ClipboardEntry *entry, char tag)
     entry->tag = tag;
 }
 
+void clip_clipboard_entry_remove_tag(ClipboardEntry *entry)
+{
+    entry->tag = 0;
+}
+
 
 uint64_t clip_clipboard_entry_get_id(ClipboardEntry *entry)
 {

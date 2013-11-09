@@ -94,6 +94,16 @@ Trimming
 In addition to the dynamic trimming feature, pressing "t" will trim both left and right sides of a selected entry. This
 operation will not modify the current clipboard value.
 
+Marking / Tagging
+-----------------
+
+Clip supports the ability to mark (or tag) an entry for quick selection.  To mark a selected record, press 'm' and then
+the desired mark letter. For example, pressing 'ma' will mark the record with the tag, 'a'. The mark will be displayed
+immediately to the left of the record.
+
+To activate a marked record, press the gave character, '`' followed by the desired mark. For example, to select the
+previously-selected 'a' record, press '\`a'. If the mark is found, the correlated record will be activated.
+
 
 
 Features

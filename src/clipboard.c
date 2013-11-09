@@ -334,6 +334,15 @@ gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry)
 }
 
 
+gboolean clip_clipboard_tag(Clipboard *clipboard, ClipboardEntry *entry, char tag)
+{
+    if(clip_clipboard_entry_get_tag(entry) == tag) {
+        clip_clipboard_entry_remove_tag(entry);
+    } else {
+        clip_clipboard_entry_set_tag(entry, tag);
+    }
+    return clip_history_update(clipboard->history, entry);
+}
 
 
 void clip_clipboard_clear(Clipboard *clipboard)
