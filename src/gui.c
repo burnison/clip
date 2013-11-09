@@ -222,11 +222,12 @@ static void clip_gui_refresh(void)
 
 static gboolean clip_gui_is_selectable(GtkWidget *widget)
 {
-    return GTK_IS_LABEL(widget) && gtk_widget_is_sensitive(widget)
-        && widget != gtk_bin_get_child(GTK_BIN(menu_item_clear))
-        && widget != gtk_bin_get_child(GTK_BIN(menu_item_history))
-        && widget != gtk_bin_get_child(GTK_BIN(menu_item_empty))
-        && widget != gtk_bin_get_child(GTK_BIN(menu_item_trim))
+    GtkWidget *contents = gtk_bin_get_child(GTK_BIN(widget));
+    return GTK_IS_LABEL(contents) && gtk_widget_is_sensitive(contents)
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_clear))
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_history))
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_empty))
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_trim))
     ;
 }
 
@@ -257,7 +258,7 @@ static void clip_gui_delete(GtkWidget *menu_item)
         warn("Trying to remove a selected item, but no item is selected.\n");
         return;
     }
-    
+
     //FIXME: I don't belong here.
     ClipboardEntry *entry = clip_gui_get_entry_copy(selected_item);
     if(!clip_clipboard_entry_get_locked(entry)){
@@ -409,26 +410,21 @@ static void clip_gui_select_mark(guint keyval)
         return;
     }
 
-    GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
-    GList *next = g_list_first(children);
-    GtkWidget *marked = NULL;
-    while(next != NULL){
-        Data *data = clip_gui_get_data(next->data);
-        if (data != NULL) {
-            char tag = clip_clipboard_entry_get_tag(data->entry);
-            if(tag != 0 && keyval == tag){
-                marked = next->data;
-                break;
-            }
-        }
-        next = g_list_next(next);
+    gint compare(GtkWidget *widget) {
+        if(!clip_gui_is_selectable(widget)){ return -1; }
+        Data *data = clip_gui_get_data(widget);
+        return !clip_clipboard_entry_has_tag(data->entry, keyval);
     }
-    g_list_free(children);
+
+    GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
+    GList *marked = g_list_find_custom(children, NULL, (GCompareFunc)compare);
     if(marked != NULL){
-        gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), marked);
-        gtk_menu_item_activate(GTK_MENU_ITEM(marked));
+        GtkWidget *found = marked->data;
+        gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), found);
+        gtk_menu_item_activate(GTK_MENU_ITEM(found));
         gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
     }
+    g_list_free(children);
 }
 
 /**
@@ -453,11 +449,10 @@ static void clip_gui_search_select_match(void)
     // Iterate through each list and check if it's a match.
     GtkWidget *first_match = NULL;
     while(next != NULL){
-        GtkWidget *contents = gtk_bin_get_child(GTK_BIN(next->data));
-        if(!clip_gui_is_selectable(contents)){
+        if(!clip_gui_is_selectable(next->data)){
             goto next;
         }
-        GtkLabel *label = GTK_LABEL(contents);
+        GtkLabel *label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(next->data)));
         const char *text = gtk_label_get_text(label);
 
         if(g_regex_match_simple(clip_gui_search_get_term(), text, G_REGEX_CASELESS, FALSE)){

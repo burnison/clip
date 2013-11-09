@@ -87,6 +87,14 @@ char clip_clipboard_entry_get_tag(ClipboardEntry *entry)
     return entry->tag;
 }
 
+gboolean clip_clipboard_entry_has_tag(ClipboardEntry *entry, char tag)
+{
+    if(entry->tag == 0){
+        return FALSE;
+    }
+    return entry->tag == tag;
+}
+
 void clip_clipboard_entry_set_tag(ClipboardEntry *entry, char tag)
 {
     entry->tag = tag;
