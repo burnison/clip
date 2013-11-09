@@ -25,7 +25,9 @@
 
 struct provider {
     GtkClipboard *clipboard;
+#if SYNC_ANY
     GtkClipboard *selection;
+#endif
     char *current;
     gboolean ownership_transferred;
     gboolean locked;
@@ -50,17 +52,17 @@ ClipboardProvider* clip_provider_new(void)
 {
     ClipboardProvider *provider = g_malloc(sizeof(ClipboardProvider));
     provider->clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-#if SYNC_SELECTION
+#if SYNC_ANY
     provider->selection = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
 #endif
     provider->current = NULL;
     provider->ownership_transferred = FALSE;
     provider->locked = FALSE;
 
-#if SYNC_SELECTION
+    g_signal_connect(G_OBJECT(provider->clipboard), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
+#if SYNC_CLIPBOARDS
     g_signal_connect(G_OBJECT(provider->selection), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
 #endif
-    g_signal_connect(G_OBJECT(provider->clipboard), "owner-change", G_CALLBACK(clip_provider_cb_owner_changed), provider);
 
     return provider;
 }
@@ -74,8 +76,10 @@ void clip_provider_free(ClipboardProvider *provider)
     g_signal_handlers_disconnect_by_data(provider->clipboard, provider);
     provider->clipboard = NULL;
 
-#if SYNC_SELECTION
+#if SYNC_CLIPBOARDS
     g_signal_handlers_disconnect_by_data(provider->selection, provider);
+#endif
+#if SYNC_ANY
     provider->selection = NULL;
 #endif
 
@@ -128,13 +132,16 @@ static gboolean clip_provider_is_provider_ready()
  * the same string), the current selection is unhilighted. As such, only swap the two values if they are actually
  * different, textually.
  */
-static void clip_provider_set_if_different(GtkClipboard *clipboard, char *new)
+static gboolean clip_provider_set_if_different(GtkClipboard *clipboard, char *new)
 {
+    gboolean changed = FALSE;
     char *old = gtk_clipboard_wait_for_text(clipboard);
     if(g_strcmp0(old, new)){
         gtk_clipboard_set_text(clipboard, new == NULL ? "" : new, -1);
+        changed = TRUE;
     }
     g_free(old);
+    return changed;
 }
 
 static char* clip_provider_prepare_value(ClipboardProvider *provider, char *text)
@@ -163,9 +170,17 @@ void clip_provider_set_current(ClipboardProvider *provider, char *text)
         g_free(copy);
         return;
     }
-    clip_provider_set_if_different(provider->clipboard, copy);
-#if SYNC_SELECTION
+
+    gboolean clipboard_changed = clip_provider_set_if_different(provider->clipboard, copy);
+// Things get a bit wonky here: if we're syncing clipboards, then primary is always up-to-date (that is, a change to
+// primary becomes the authoritative change). However, when only syncing *to* primary, a change to primary is not the
+// authoritative change, thus, only copy to primary iff clipboard changes.
+#if SYNC_CLIPBOARDS
     clip_provider_set_if_different(provider->selection, copy);
+#elif SYNC_PRIMARY
+    if(clipboard_changed) {
+        clip_provider_set_if_different(provider->selection, copy);
+    }
 #endif
     clip_provider_unlock(provider);
 
@@ -180,7 +195,7 @@ void clip_provider_clear(ClipboardProvider *provider)
         return;
     }
     gtk_clipboard_set_text(provider->clipboard, "", -1);
-#if SYNC_SELECTION
+#if SYNC_ANY
     gtk_clipboard_set_text(provider->selection, "", -1);
 #endif
     clip_provider_unlock(provider);
@@ -201,23 +216,23 @@ static void clip_provider_sync_clipboards(ClipboardProvider *provider)
     }
     char *on_clipboard = gtk_clipboard_wait_for_text(provider->clipboard);
     char *selection = on_clipboard;
-#if SYNC_SELECTION
-    char *on_selection = gtk_clipboard_wait_for_text(provider->selection);
+#if SYNC_CLIPBOARDS
+    char *on_primary = gtk_clipboard_wait_for_text(provider->selection);
     // Check if the selection even has content.
-    if(on_selection != NULL && strlen(on_selection) > 0){
+    if(on_primary != NULL && strlen(on_primary) > 0){
         // Check if selection is different from clipboard. If it is, then make sure that it's the selection that changed and
         // not clipboard by comparing clipboard to "current".
-        if(g_strcmp0(on_selection, on_clipboard) && !g_strcmp0(on_clipboard, provider->current)){
+        if(g_strcmp0(on_primary, on_clipboard) && !g_strcmp0(on_clipboard, provider->current)){
             // selection definitely changed. Use it.
-            selection = on_selection;
+            selection = on_primary;
         }
     }
 #endif
     clip_provider_unlock(provider);
     clip_provider_set_current(provider, selection);
     g_free(on_clipboard);
-#if SYNC_SELECTION
-    g_free(on_selection);
+#if SYNC_CLIPBOARDS
+    g_free(on_primary);
 #endif
 }
 

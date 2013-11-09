@@ -28,12 +28,20 @@
 #define DAEMON_REFRESH_INTERVAL 500
 
 /**
- * If true, Clip will sync X11's primary and selection clipboards. While
- * this is extremely useful, it results in a lot of noise.  Having used
- * this feature for over 3 years, I've finally reverted to using a more
- * convenient key mapping.
+ * If true, Clip will sync X11's primary and 'clipboard' clipboards. While
+ * this is extremely useful, it results in a lot of noise. After about 3 years
+ * using this feature, I've decided to disable it in favour of SYNC_PRIMARY,
+ * which is quite often what I actually want. This feature is supported but
+ * discouraged.
  */
-#define SYNC_SELECTION 0
+#define SYNC_CLIPBOARDS 0
+/**
+ * If true, Clip will copy the X11 'clipboard' clipboard to the primary
+ * clipboard. Unlike SYNC_CLIPBOARDS, changes to primary will not be copied to
+ * 'clipboard'.
+ */
+#define SYNC_PRIMARY 1
+#define SYNC_ANY SYNC_CLIPBOARDS||SYNC_PRIMARY
 
 /**
  * The default auto-trim operation. This uses GLIB trim modes.
