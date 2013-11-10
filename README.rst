@@ -50,7 +50,7 @@ Searching History
 
 Clip also allows a user to search for a previously-archived string by pressing "/" when the pop-up menu is visible. This
 will enter search mode. Clip searches using Perl-compatible regex in a default case-insensitive mode (case insensitivity
-may be disabled by prefixing a pattern with "(^i)"). The first history item matching the input pattern will be
+may be disabled by prefixing a pattern with "(?-i)"). The first history item matching the input pattern will be
 highlighted; pressing tab will move the active focus to the next match. Pressing enter or clicking on the desired menu
 item will set it as active.
 
