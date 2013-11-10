@@ -47,18 +47,45 @@ typedef struct {
 } Data;
 
 
+static GtkWidget* clip_gui_find(GCompareFunc compare)
+{
+    GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
+    GList *found_child = g_list_find_custom(children, NULL, compare);
+    GtkWidget *found = found_child == NULL ? NULL : found_child->data;
+    g_list_free(children);
+    return found;
+}
+
+static void clip_gui_activate(GtkWidget *widget)
+{
+    if(widget == NULL){
+        debug("No widget to select.\n");
+        return;
+    }
+    gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), widget);
+    gtk_menu_item_activate(GTK_MENU_ITEM(widget));
+    gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
+}
+
+static gboolean clip_gui_is_selectable(GtkWidget *widget)
+{
+    GtkWidget *contents = gtk_bin_get_child(GTK_BIN(widget));
+    return GTK_IS_LABEL(contents) && gtk_widget_is_sensitive(contents)
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_clear))
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_history))
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_empty))
+        && contents != gtk_bin_get_child(GTK_BIN(menu_item_trim))
+    ;
+}
 
 static GtkWidget* clip_gui_get_selected_item(void)
 {
     return gtk_menu_shell_get_selected_item(GTK_MENU_SHELL(menu));
 }
 
-
 static Data* clip_gui_get_data(GtkWidget *menu_item)
 {
-    if(menu_item == NULL){
-        return NULL;
-    }
+    if(menu_item == NULL || !clip_gui_is_selectable(menu_item)){ return NULL; }
     return g_object_get_data(G_OBJECT(menu_item), "data");
 }
 
@@ -220,16 +247,6 @@ static void clip_gui_refresh(void)
 
 
 
-static gboolean clip_gui_is_selectable(GtkWidget *widget)
-{
-    GtkWidget *contents = gtk_bin_get_child(GTK_BIN(widget));
-    return GTK_IS_LABEL(contents) && gtk_widget_is_sensitive(contents)
-        && contents != gtk_bin_get_child(GTK_BIN(menu_item_clear))
-        && contents != gtk_bin_get_child(GTK_BIN(menu_item_history))
-        && contents != gtk_bin_get_child(GTK_BIN(menu_item_empty))
-        && contents != gtk_bin_get_child(GTK_BIN(menu_item_trim))
-    ;
-}
 
 
 /**
@@ -248,9 +265,6 @@ static void clip_gui_remove_widget(GtkWidget *menu_item)
     gtk_container_remove(GTK_CONTAINER(menu), menu_item);
 }
 
-/**
- * Remove the currently selected men item.
- */
 static void clip_gui_delete(GtkWidget *menu_item)
 {
     GtkWidget *selected_item = clip_gui_get_selected_item();
@@ -267,44 +281,6 @@ static void clip_gui_delete(GtkWidget *menu_item)
         debug("Refusing to delete locked item.\n");
     }
     clip_clipboard_entry_free(entry);
-}
-
-/**
- * Gets the nth selectable item, starting at 0.
- */
-static GtkWidget* clip_gui_get_nth_menu_item(unsigned int n)
-{
-    GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
-    GList *next = g_list_first(children);
-    GtkWidget *nth = NULL;
-    while(next != NULL){
-        Data *data = clip_gui_get_data(next->data);
-        if(data != NULL && data->row == n){
-            nth = next->data;
-            break;
-        }
-        next = g_list_next(next);
-    }
-    g_list_free(children);
-    return nth;
-}
-
-/**
- * Moves the currently selected item no the nth index.
- */
-static void clip_gui_select_index(unsigned int index)
-{
-    if(index > 9){
-        error("Captured an out-of-range selection index (0-9). This is probably a key mapping bug.\n");
-        return;
-    }
-    gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
-    GtkWidget *nth = clip_gui_get_nth_menu_item(index);
-    if(nth != NULL){
-        gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), nth);
-        gtk_menu_item_activate(GTK_MENU_ITEM(nth));
-        gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
-    }
 }
 
 static void clip_gui_lock(GtkWidget *selected_menu_item)
@@ -398,40 +374,40 @@ static gboolean clip_gui_mark(GtkWidget *selected_menu_item, guint keyval)
 
 static gboolean clip_gui_select_mark(guint keyval)
 {
+    // Control character may modify the next val. Let it pass through.
     if(keyval == GDK_KEY_space || g_unichar_iscntrl(gdk_keyval_to_unicode(keyval))) { return TRUE; }
-
-    debug("Looking for mark, %c.\n", keyval);
     gint compare(GtkWidget *widget) {
-        if(!clip_gui_is_selectable(widget)){ return -1; }
         Data *data = clip_gui_get_data(widget);
+        if(data == NULL) {
+            return -1;
+        }
         return !clip_clipboard_entry_has_tag(data->entry, keyval);
     }
 
-    GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
-    GList *marked = g_list_find_custom(children, NULL, (GCompareFunc)compare);
-    if(marked != NULL){
-        debug("Found a record tagged with %c.\n", keyval);
-        GtkWidget *found = marked->data;
-        gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), found);
-        gtk_menu_item_activate(GTK_MENU_ITEM(found));
-        gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
-    }
-    g_list_free(children);
+    debug("Looking for mark, %c.\n", keyval);
+    GtkWidget *marked = clip_gui_find((GCompareFunc)compare);
+    clip_gui_activate(marked);
     return FALSE;
 }
 
-/**
- * Moves the currently selected item to the nth match on the menu.
- */
+static void clip_gui_activate_index(unsigned int index)
+{
+    gint compare(GtkWidget *widget) {
+        Data *data = clip_gui_get_data(widget);
+        if(data == NULL) {
+            return -1;
+        }
+        return data->row != index;
+    }
+    debug("Looking for index, %d.\n", index);
+    GtkWidget *nth = clip_gui_find((GCompareFunc)compare);
+    clip_gui_activate(nth);
+}
+
+
 static void clip_gui_search_select_match(void)
 {
-    if(!clip_gui_search_in_progress()){
-        // Nothing can be done if there is no search in progress.
-        return;
-    } else if(clip_gui_search_get_length() < 1){
-        // Because this is regex, an empty string will always match.
-        return;
-    }
+    if(!clip_gui_search_in_progress() || clip_gui_search_get_length() < 1){ return; }
 
     gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
 
@@ -500,7 +476,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
                 break;
             case GDK_KEY_0: case GDK_KEY_1: case GDK_KEY_2: case GDK_KEY_3: case GDK_KEY_4:
             case GDK_KEY_5: case GDK_KEY_6: case GDK_KEY_7: case GDK_KEY_8: case GDK_KEY_9:
-                clip_gui_select_index(keyval - GDK_KEY_0);
+                clip_gui_activate_index(keyval - GDK_KEY_0);
                 update_required = FALSE;
                 break;
             case GDK_KEY_e:
