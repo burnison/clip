@@ -40,11 +40,13 @@ static GtkWidget *menu_item_empty;
 static GtkWidget *menu_item_trim;
 static gboolean marking;
 static gboolean finding;
+static int rows;
 
 typedef struct {
     ClipboardEntry *entry;
     int row;
 } Data;
+
 
 
 static GtkWidget* clip_gui_find(GCompareFunc compare)
@@ -130,17 +132,11 @@ static GtkWidget* clip_gui_get_item(ClipboardEntry *entry)
 
 
 
-/**
- * Sets a label's text.
- */
 static void clip_gui_set_normal_label(GtkBin *item, char *text)
 {
     gtk_label_set_label(GTK_LABEL(gtk_bin_get_child(item)), text);
 }
 
-/**
- * Sets the text of a label and takes care of cleaning up resources.
- */
 static void clip_gui_set_markedup_label(GtkBin *item, char *format, char *text)
 {
     GtkLabel *label = GTK_LABEL(gtk_bin_get_child(item));
@@ -149,9 +145,6 @@ static void clip_gui_set_markedup_label(GtkBin *item, char *format, char *text)
     g_free(markedup);
 }
 
-/**
- * Sets the provided menu item's text according to its state.
- */
 static void clip_gui_update_entry_text(GtkWidget *menu_item)
 {
     Data *data = clip_gui_get_data(menu_item);
@@ -372,7 +365,7 @@ static gboolean clip_gui_mark(GtkWidget *selected_menu_item, guint keyval)
     return FALSE;
 }
 
-static gboolean clip_gui_select_mark(guint keyval)
+static gboolean clip_gui_activate_mark(guint keyval)
 {
     // Control character may modify the next val. Let it pass through.
     if(keyval == GDK_KEY_space || g_unichar_iscntrl(gdk_keyval_to_unicode(keyval))) { return TRUE; }
@@ -405,51 +398,30 @@ static void clip_gui_activate_index(unsigned int index)
 }
 
 
-static void clip_gui_search_select_match(void)
+static void clip_gui_search_select_match(gboolean reset_on_end)
 {
     if(!clip_gui_search_in_progress() || clip_gui_search_get_length() < 1){ return; }
-
-    gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
-
-    int active_position = 0;
-    GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
-    GList *next = g_list_first(children);
-
-    // Iterate through each list and check if it's a match.
-    GtkWidget *first_match = NULL;
-    while(next != NULL){
-        if(!clip_gui_is_selectable(next->data)){
-            goto next;
+    gint compare(GtkWidget *widget) {
+        Data *data = clip_gui_get_data(widget);
+        if(data == NULL || data->row <= clip_gui_search_get_position()) {
+            return -1;
         }
-        GtkLabel *label = GTK_LABEL(gtk_bin_get_child(GTK_BIN(next->data)));
-        const char *text = gtk_label_get_text(label);
-
-        if(g_regex_match_simple(clip_gui_search_get_term(), text, G_REGEX_CASELESS, FALSE)){
-            // If this is the first match, hold onto it. We need to re-pivot when resetting search position.
-            if(first_match == NULL){
-                first_match = GTK_WIDGET(next->data);
-            }
-
-            // Skip the first nth records that match.
-            active_position++;
-            if(active_position > clip_gui_search_get_position()){
-                gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), GTK_WIDGET(next->data));
-                break;
-            }
-        }
-next:
-        next = g_list_next(next);
+        const char *text = clip_clipboard_entry_get_text(data->entry);
+        return !g_regex_match_simple(clip_gui_search_get_term(), text, G_REGEX_CASELESS, FALSE);
     }
 
-    trace("Active position is %d and search position is %d.\n", active_position, clip_gui_search_get_position());
-    if(clip_gui_search_get_position() == active_position){
+    GtkWidget *matching = clip_gui_find((GCompareFunc)compare);
+    if(matching != NULL) {
+        Data *data = clip_gui_get_data(matching);
+        gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), matching);
+        clip_gui_search_set_position(data->row);
+    } else {
+        gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
         clip_gui_search_set_position(0);
-        if(first_match != NULL){
-            debug("Resetting to 0. Setting first match as active.\n");
-            gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), first_match);
+        if(reset_on_end) {
+            clip_gui_search_select_match(FALSE);
         }
     }
-    g_list_free(children);
 }
 
 static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointer data)
@@ -515,7 +487,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
         marking = clip_gui_mark(selected_menu_item, keyval);
 
     } else if (finding) {
-        finding = clip_gui_select_mark(keyval);
+        finding = clip_gui_activate_mark(keyval);
         update_required = FALSE;
 
     } else if(clip_gui_search_in_progress()){ 
@@ -535,13 +507,13 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
                 clip_gui_search_remove_char();
                 break;
             case GDK_KEY_Tab:
-                clip_gui_search_get_and_increment_position();
+                clip_gui_search_increment_position();
                 break;
             default:
                 clip_gui_search_append(keyval);
                 break;
         }
-        clip_gui_search_select_match();
+        clip_gui_search_select_match(TRUE);
     }
 
     if(update_required) {
@@ -643,13 +615,14 @@ static void clip_gui_prepare_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     GList* history = clip_clipboard_get_history(clipboard);
+    rows = 0;
     if(history == NULL){
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_empty);
     } else {
-        int row = 0;
-        g_list_foreach(history, (GFunc)clip_gui_entry_add, &row); 
+        g_list_foreach(history, (GFunc)clip_gui_entry_add, &rows);
     }
     clip_clipboard_free_history(history);
+    debug("Showing %d entries.\n", rows);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_trim);

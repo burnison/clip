@@ -86,15 +86,14 @@ int clip_gui_search_get_position(void)
     return position;
 }
 
-int clip_gui_search_get_and_increment_position(void)
+void clip_gui_search_set_position(int _position)
 {
-    position++;
-    return clip_gui_search_get_position();
+    position = _position;
 }
 
-void clip_gui_search_set_position(int position_)
+void clip_gui_search_increment_position(void)
 {
-    position = position_;
+    position++;
 }
 
 

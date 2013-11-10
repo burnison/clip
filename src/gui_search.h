@@ -32,5 +32,5 @@ char* clip_gui_search_get_term(void);
 int clip_gui_search_get_length(void);
 
 int clip_gui_search_get_position(void);
-int clip_gui_search_get_and_increment_position(void);
 void clip_gui_search_set_position(int position);
+void clip_gui_search_increment_position(void);
