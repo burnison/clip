@@ -119,7 +119,7 @@ static gboolean clip_clipboard_different(char *new, char *old)
 void clip_clipboard_set_new(Clipboard *clipboard, char *text)
 {
     ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0, 0);
-    clip_clipboard_set(clipboard, entry);
+    clip_clipboard_set(clipboard, entry, FALSE);
     clip_clipboard_entry_free(entry);
 }
 
@@ -135,16 +135,19 @@ static gboolean clip_clipboard_replace_similar(Clipboard *clipboard, ClipboardEn
             // Just in case this is an update, remove the old one.
             clip_clipboard_remove(clipboard, entry);
         }
-        clip_clipboard_set(clipboard, similar);
+        clip_clipboard_set(clipboard, similar, TRUE);
         clip_clipboard_entry_free(similar);
         return TRUE;
     }
     return FALSE;
 }
 
-void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry)
+void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry, gboolean force)
 {
-    if(clip_clipboard_replace_similar(clipboard, entry)){
+    if(!force && !clip_provider_is_provider_ready()){
+        debug("Clipboard is not currently ready.\n");
+        return;
+    } else if(clip_clipboard_replace_similar(clipboard, entry)){
         debug("This value was swapped out with a similar entry.\n");
         return;
     }
@@ -164,7 +167,7 @@ void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry)
                 debug("No usable values.\n");
             } else {
                 debug("Current value not usable. Resetting to previous head.\n");
-                clip_clipboard_set(clipboard, head);
+                clip_clipboard_set(clipboard, head, TRUE);
                 clip_clipboard_entry_free(head);
             }
         } else {

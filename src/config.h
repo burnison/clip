@@ -33,12 +33,18 @@
  * using this feature, I've decided to disable it in favour of SYNC_PRIMARY,
  * which is quite often what I actually want. This feature is supported but
  * discouraged.
+ *
+ * N.B. This feature *should* not be used with SYNC_PRIMARY, as the two features
+ * will start interfering each each other.
  */
 #define SYNC_CLIPBOARDS 0
 /**
  * If true, Clip will copy the X11 'clipboard' clipboard to the primary
  * clipboard. Unlike SYNC_CLIPBOARDS, changes to primary will not be copied to
  * 'clipboard'.
+ *
+ * N.B. This feature *should* not be used with SYNC_PRIMARY, as the two features
+ * will start interfering each each other.
  */
 #define SYNC_PRIMARY 1
 #define SYNC_ANY SYNC_CLIPBOARDS||SYNC_PRIMARY

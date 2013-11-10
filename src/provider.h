@@ -27,6 +27,7 @@ void clip_provider_free(ClipboardProvider *provider);
 char* clip_provider_get_current(ClipboardProvider *provider);
 void clip_provider_free_current(char *current);
 
+gboolean clip_provider_is_provider_ready(void);
 void clip_provider_set_current(ClipboardProvider *provider, char *text);
 void clip_provider_clear(ClipboardProvider *provider);
 

@@ -112,7 +112,7 @@ static gboolean clip_provider_lock(ClipboardProvider *provider)
  * currently pressed, we can assume that the selection clipboard is not fully complete, and thus, the content is not yet
  * ready to be consumed.
  */
-static gboolean clip_provider_is_provider_ready()
+gboolean clip_provider_is_provider_ready()
 {
     GdkWindow *root_window = gdk_get_default_root_window();
     GdkDeviceManager *device_manager = gdk_display_get_device_manager(gdk_display_get_default());
@@ -120,7 +120,6 @@ static gboolean clip_provider_is_provider_ready()
     GdkModifierType modifiers = {0};
 
     gdk_window_get_device_position(root_window, pointer, NULL, NULL, &modifiers);
-
     if(modifiers & (GDK_BUTTON1_MASK | GDK_SHIFT_MASK)){
         return FALSE;
     }
@@ -161,10 +160,6 @@ static char* clip_provider_prepare_value(ClipboardProvider *provider, char *text
  */
 void clip_provider_set_current(ClipboardProvider *provider, char *text)
 {
-    if(!clip_provider_is_provider_ready()){
-        return;
-    }
-
     char *copy = clip_provider_prepare_value(provider, text);
     if(!clip_provider_lock(provider)){
         g_free(copy);

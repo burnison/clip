@@ -54,9 +54,12 @@ void clip_clipboard_sync_with_provider(Clipboard *clipboard);
 
 /**
  * Sets the clipboard's current value to a copy of the current entry. This has
- * the same characteristics as set_new.
+ * the same characteristics as set_new. Sometimes, Clip thinks it knows best
+ * whether or not the clipboard should be set (say, perhaps, the shift key
+ * is still depressed and PRIMARY is used as a source). In instances like these,
+ * you can force a set regardless of how smart Clip is.
  */
-void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry);
+void clip_clipboard_set(Clipboard *clipboard, ClipboardEntry *entry, gboolean force);
 /**
  * Sets the clipboards current value to a copy of the specified text. If text is
  * NULL, the current clipboard value, along with its associated history entry,

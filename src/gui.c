@@ -212,7 +212,7 @@ static void clip_gui_update_menu_text(void)
 static void clip_gui_refresh(void)
 {
     ClipboardEntry *current_entry = clip_clipboard_get_head(clipboard);
-    clip_clipboard_set(clipboard, current_entry);
+    clip_clipboard_set(clipboard, current_entry, TRUE);
     clip_clipboard_entry_free(current_entry);
     clip_gui_update_menu_text();
 }
@@ -295,7 +295,7 @@ static GtkWidget* clip_gui_get_nth_menu_item(unsigned int n)
 static void clip_gui_select_index(unsigned int index)
 {
     if(index > 9){
-        error("Captured an out-of-range selection index (1-9). This is probably a key mapping bug.\n");
+        error("Captured an out-of-range selection index (0-9). This is probably a key mapping bug.\n");
         return;
     }
     gtk_menu_shell_deselect(GTK_MENU_SHELL(menu));
@@ -337,7 +337,7 @@ static void clip_gui_edit(GtkWidget *selected_menu_item, gboolean promote)
     if(edited != NULL){
         clip_clipboard_entry_set_text(selected_entry, edited);
         if(promote){
-            clip_clipboard_set(clipboard, selected_entry);
+            clip_clipboard_set(clipboard, selected_entry, TRUE);
         } else {
             clip_clipboard_replace(clipboard, selected_entry);
         }
@@ -384,32 +384,23 @@ static void clip_gui_trim(GtkWidget *selected_menu_item)
     clip_clipboard_entry_free(entry);
 }
 
-static void clip_gui_mark(GtkWidget *selected_menu_item, guint keyval)
+static gboolean clip_gui_mark(GtkWidget *selected_menu_item, guint keyval)
 {
-    if(selected_menu_item == NULL) {
-        return;
-    }
+    if(selected_menu_item == NULL) { return FALSE; }
+    if(keyval == GDK_KEY_space || g_unichar_iscntrl(gdk_keyval_to_unicode(keyval))) { return TRUE; }
 
     debug("Entering mark mode. Next letter marks.\n");
-    gunichar c = gdk_keyval_to_unicode(keyval);
-    if(keyval == GDK_KEY_space || g_unichar_iscntrl(c)) {
-        debug("Control character detected. Dropping.\n");
-        return;
-    }
     ClipboardEntry *selected_entry = clip_gui_get_entry_copy(selected_menu_item);
     clip_clipboard_tag(clipboard, selected_entry, keyval);
     clip_clipboard_entry_free(selected_entry);
+    return FALSE;
 }
 
-static void clip_gui_select_mark(guint keyval)
+static gboolean clip_gui_select_mark(guint keyval)
 {
-    debug("Looking for mark, %c.\n", keyval);
-    gunichar c = gdk_keyval_to_unicode(keyval);
-    if(keyval == GDK_KEY_space || g_unichar_iscntrl(c)) {
-        debug("Control character detected. Dropping.\n");
-        return;
-    }
+    if(keyval == GDK_KEY_space || g_unichar_iscntrl(gdk_keyval_to_unicode(keyval))) { return TRUE; }
 
+    debug("Looking for mark, %c.\n", keyval);
     gint compare(GtkWidget *widget) {
         if(!clip_gui_is_selectable(widget)){ return -1; }
         Data *data = clip_gui_get_data(widget);
@@ -419,12 +410,14 @@ static void clip_gui_select_mark(guint keyval)
     GList *children = gtk_container_get_children(GTK_CONTAINER(menu));
     GList *marked = g_list_find_custom(children, NULL, (GCompareFunc)compare);
     if(marked != NULL){
+        debug("Found a record tagged with %c.\n", keyval);
         GtkWidget *found = marked->data;
         gtk_menu_shell_select_item(GTK_MENU_SHELL(menu), found);
         gtk_menu_item_activate(GTK_MENU_ITEM(found));
         gtk_menu_shell_deactivate(GTK_MENU_SHELL(menu));
     }
     g_list_free(children);
+    return FALSE;
 }
 
 /**
@@ -543,12 +536,10 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
                 break;
         }
     } else if(marking) {
-        clip_gui_mark(selected_menu_item, keyval);
-        marking = FALSE;
+        marking = clip_gui_mark(selected_menu_item, keyval);
 
     } else if (finding) {
-        clip_gui_select_mark(keyval);
-        finding = FALSE;
+        finding = clip_gui_select_mark(keyval);
         update_required = FALSE;
 
     } else if(clip_gui_search_in_progress()){ 
@@ -601,7 +592,7 @@ static gboolean clip_gui_cb_toggle_lock(GtkWidget *widget, GdkEvent *event, Data
 static gboolean clip_gui_cb_history_activated(GtkMenuItem *widget, Data *data)
 {
     trace("History item activated.\n");
-    clip_clipboard_set(clipboard, data->entry);
+    clip_clipboard_set(clipboard, data->entry, TRUE);
     return FALSE;
 }
 
