@@ -383,7 +383,7 @@ static void clip_gui_select_search_match(gboolean reset_on_end)
     if(!clip_gui_search_in_progress() || clip_gui_search_get_length() < 1){ return; }
     gint compare(GtkWidget *widget) {
         Data *data = clip_gui_get_data(widget);
-        if(data == NULL || data->row <= clip_gui_search_get_position()) {
+        if(data == NULL || data->row < clip_gui_search_get_position()) {
             return -1;
         }
         const char *text = clip_clipboard_entry_get_text(data->entry);
