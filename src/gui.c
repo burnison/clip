@@ -38,6 +38,9 @@ static GtkWidget *menu_item_clear;
 static GtkWidget *menu_item_history;
 static GtkWidget *menu_item_empty;
 static GtkWidget *menu_item_trim;
+#ifdef DEBUG
+static GtkWidget *menu_item_exit;
+#endif
 static gboolean marking;
 static gboolean finding;
 static int rows;
@@ -610,8 +613,6 @@ static void clip_gui_prepare_menu(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_clear);
 
 #ifdef DEBUG
-    GtkWidget *menu_item_exit = gtk_menu_item_new_with_mnemonic(GUI_DEBUG_EXIT_MESSAGE);
-    g_signal_connect(G_OBJECT(menu_item_exit), "activate", G_CALLBACK(gtk_main_quit), NULL);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_exit);
 #endif
 
@@ -682,6 +683,11 @@ void clip_gui_init(Clipboard *_clipboard)
     menu_item_trim = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_AUTO_TRIM_MESSAGE));
     g_signal_connect(G_OBJECT(menu_item_trim), "activate", G_CALLBACK(clip_gui_cb_trim), NULL);
 
+#ifdef DEBUG
+    menu_item_exit = g_object_ref(gtk_menu_item_new_with_mnemonic(GUI_DEBUG_EXIT_MESSAGE));
+    g_signal_connect(G_OBJECT(menu_item_exit), "activate", G_CALLBACK(gtk_main_quit), NULL);
+#endif
+
     keybinder_init();
     keybinder_bind(GUI_GLOBAL_KEY, clip_gui_cb_hotkey_handler, NULL);
 
@@ -715,6 +721,12 @@ void clip_gui_destroy(void)
     g_object_unref(menu_item_trim);
     gtk_widget_destroy(menu_item_trim);
     menu_item_trim = NULL;
+
+#ifdef DEBUG
+    g_object_unref(menu_item_exit);
+    gtk_widget_destroy(menu_item_exit);
+    menu_item_exit = NULL;
+#endif
 
     gtk_widget_destroy(menu);
     menu = NULL;
