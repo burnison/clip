@@ -22,7 +22,7 @@
 
 typedef struct clipboard_entry ClipboardEntry;
 
-ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count, char tag);
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count, char tag, gboolean masked);
 ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry *entry);
 void clip_clipboard_entry_free(ClipboardEntry *entry);
 
@@ -50,5 +50,14 @@ unsigned int clip_clipboard_entry_get_count(ClipboardEntry *entry);
 gboolean clip_clipboard_entry_get_locked(ClipboardEntry *entry);
 void clip_clipboard_entry_set_locked(ClipboardEntry *entry, gboolean locked);
 
+/**
+ * Determines if the two entries are equal by ID or value.
+ */
 gboolean clip_clipboard_entry_equals(ClipboardEntry *a, ClipboardEntry *b);
+/**
+ * Determines if the two entries are the same entry (by ID).
+ */
 gboolean clip_clipboard_entry_same(ClipboardEntry *a, ClipboardEntry *b);
+
+gboolean clip_clipboard_entry_is_masked(ClipboardEntry *entry);
+void clip_clipboard_entry_set_masked(ClipboardEntry *entry, gboolean masked);

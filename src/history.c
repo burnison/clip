@@ -34,24 +34,27 @@
                                "    text TEXT NOT NULL UNIQUE,"\
                                "    usage_count BIGINT NOT NULL DEFAULT 0,"\
                                "    locked INT NOT NULL DEFAULT 0,"\
-                               "    tag CHAR(1) UNIQUE"\
+                               "    tag CHAR(1) UNIQUE,"\
+                               "    masked INT NOT NULL DEFAULT 0"\
                                ")"
 
-#define HISTORY_INSERT_EXISTING "UPDATE history SET text = ?1, created = current_timestamp, usage_count = usage_count + 1 WHERE id = ?2"
+#define HISTORY_INSERT_EXISTING "UPDATE history SET text = ?1, created = current_timestamp, usage_count = usage_count + 1, masked = ?2 WHERE id = ?3"
 // Rather than doing an insert+select+update or a constraint violation, just do a replace.
-#define HISTORY_INSERT_NEW "INSERT OR REPLACE INTO history(id, text, created, locked, usage_count, tag) VALUES( "\
+#define HISTORY_INSERT_NEW "INSERT OR REPLACE INTO history(id, text, created, locked, usage_count, tag, masked) VALUES( "\
                                 "(SELECT id FROM history WHERE text = ?1), "\
                                 "?1, current_timestamp, "\
                                 "(SELECT locked FROM history WHERE text = ?1), "\
                                 "(SELECT usage_count + 1 FROM history WHERE text = ?1), "\
-                                "(SELECT tag FROM history WHERE text = ?1)"\
+                                "(SELECT tag FROM history WHERE text = ?1), "\
+                                "(SELECT masked FROM history WHERE text = ?1)"\
                                 ")"
 
 #define HISTORY_UPDATE_BY_ID "UPDATE history SET "\
                                 "text = ?1, "\
                                 "locked = ?2, "\
-                                "tag = ?3 "\
-                                "WHERE id = ?4"
+                                "tag = ?3, "\
+                                "masked = ?4 "\
+                                "WHERE id = ?5"
 
 #define HISTORY_DELETE_UNLOCKED_BY_ID "DELETE FROM history WHERE id = ? AND locked = 0"
 #define HISTORY_DELETE_UNLOCKED_BY_AGE "DELETE FROM history WHERE id = (SELECT max(id) FROM history WHERE locked = 0)"
@@ -61,8 +64,8 @@
 // Use a LRU+LFU eviction policy.
 #define HISTORY_EVICT_SINGLE "DELETE FROM history WHERE id = (SELECT id FROM history WHERE locked = 0 ORDER BY usage_count, id LIMIT 1)"
 
-#define HISTORY_SELECT_ALL "SELECT id, text, locked, usage_count, tag FROM history ORDER BY created, id"
-#define HISTORY_SELECT_BY_TEXT "SELECT id, text, locked, usage_count, tag FROM history WHERE text = ?1"
+#define HISTORY_SELECT_ALL "SELECT id, text, locked, usage_count, tag, masked FROM history ORDER BY created, id"
+#define HISTORY_SELECT_BY_TEXT "SELECT id, text, locked, usage_count, tag, masked FROM history WHERE text = ?1"
 #define HISTORY_SELECT_COUNT "SELECT count(*) FROM history"
 
 static int levenshtein_distance(const char *s, const char *t);
@@ -182,7 +185,8 @@ static gboolean clip_history_prepend_existing(ClipboardHistory *history, Clipboa
     int status = sqlite3_prepare(history->storage, HISTORY_INSERT_EXISTING, -1, &statement, NULL);
     if(status == SQLITE_OK){
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
-        sqlite3_bind_int64(statement, 2, id);
+        sqlite3_bind_int(statement, 2, clip_clipboard_entry_is_masked(entry));
+        sqlite3_bind_int64(statement, 3, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
             warn("Couldn't prepend existing entry, %"PRIu64" (error %d).\n", id, status);
             success = FALSE;
@@ -270,7 +274,8 @@ gboolean clip_history_update(ClipboardHistory *history, ClipboardEntry *entry)
         sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT);
         sqlite3_bind_int(statement, 2, clip_clipboard_entry_get_locked(entry));
         sqlite3_bind_text(statement, 3, tag == 0 ? NULL : &tag, 1, SQLITE_TRANSIENT);
-        sqlite3_bind_int64(statement, 4, id);
+        sqlite3_bind_int(statement, 4, clip_clipboard_entry_is_masked(entry));
+        sqlite3_bind_int64(statement, 5, id);
         if((status = sqlite3_step(statement)) != SQLITE_DONE){
             warn("Couldn't update entry, %"PRIu64" (error %d).\n", id, status);
             success = FALSE;
@@ -345,7 +350,8 @@ static ClipboardEntry* clip_history_entry_for_row(sqlite3_stmt *statement)
     gboolean locked = sqlite3_column_int(statement, 2);
     int count = sqlite3_column_int(statement, 3);
     char *tag = (char*)sqlite3_column_text(statement, 4);
-    return clip_clipboard_entry_new(id, text, locked, count, tag == NULL ? 0 : tag[0]);
+    gboolean masked = sqlite3_column_int(statement, 5);
+    return clip_clipboard_entry_new(id, text, locked, count, tag == NULL ? 0 : tag[0], masked);
 }
 
 GList* clip_history_get_list(ClipboardHistory *history)

@@ -95,6 +95,7 @@ gboolean clip_clipboard_trim(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_upper(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_to_lower(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry);
+gboolean clip_clipboard_toggle_mask(Clipboard *clipboard, ClipboardEntry *entry);
 gboolean clip_clipboard_tag(Clipboard *clipboard, ClipboardEntry *entry, char tag);
 
 

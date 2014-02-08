@@ -77,6 +77,8 @@
  */
 #define GUI_GLOBAL_KEY "<Ctrl><Alt>P"
 
+#define GUI_MASK_CHAR '*'
+
 /**
  * The maximum number of characters to display in the pop-up menu.
  */

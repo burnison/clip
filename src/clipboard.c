@@ -118,7 +118,7 @@ static gboolean clip_clipboard_different(char *new, char *old)
 
 void clip_clipboard_set_new(Clipboard *clipboard, char *text)
 {
-    ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0, 0);
+    ClipboardEntry *entry = clip_clipboard_entry_new(0, text, FALSE, 0, 0, FALSE);
     clip_clipboard_set(clipboard, entry, FALSE);
     clip_clipboard_entry_free(entry);
 }
@@ -333,6 +333,13 @@ gboolean clip_clipboard_toggle_lock(Clipboard *clipboard, ClipboardEntry *entry)
 {
     gboolean locked = clip_clipboard_entry_get_locked(entry);
     clip_clipboard_entry_set_locked(entry, !locked);
+    return clip_history_update(clipboard->history, entry);
+}
+
+gboolean clip_clipboard_toggle_mask(Clipboard *clipboard, ClipboardEntry *entry)
+{
+    gboolean masked = clip_clipboard_entry_is_masked(entry);
+    clip_clipboard_entry_set_masked(entry, !masked);
     return clip_history_update(clipboard->history, entry);
 }
 

@@ -104,6 +104,13 @@ immediately to the left of the record.
 To activate a marked record, press the gave character, '`' followed by the desired mark. For example, to select the
 previously-selected 'a' record, press '\`a'. If the mark is found, the correlated record will be activated.
 
+Masking
+-------
+
+When a semi-sensitive value is present on your clipboard, you may toggle a display mask by pressing '*' with the
+target menu item highlighted. This will mask-out the displayed text. Be aware that masked values are *not* encrypted
+or in any way obfuscated in Clip's database. Because the actual displayed value is rendered unreadable, masking works
+best when used in conjunction with marks/tags.
 
 
 Features

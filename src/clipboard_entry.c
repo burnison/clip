@@ -22,13 +22,14 @@
 struct clipboard_entry {
     uint64_t id;
     char *text;
-    gboolean locked;
     unsigned int count;
     char tag;
+    gboolean locked;
+    gboolean masked;
 };
 
 
-ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count, char tag)
+ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked, unsigned int count, char tag, gboolean masked)
 {
     ClipboardEntry *entry = g_malloc(sizeof(ClipboardEntry));
     entry->id = id;
@@ -36,6 +37,7 @@ ClipboardEntry* clip_clipboard_entry_new(int64_t id, char *text, gboolean locked
     entry->locked = locked;
     entry->count = count;
     entry->tag = tag;
+    entry->masked = masked;
     return entry;
 }
 
@@ -44,7 +46,7 @@ ClipboardEntry* clip_clipboard_entry_clone(ClipboardEntry *entry)
     if(entry == NULL){
         return NULL;
     }
-    return clip_clipboard_entry_new(entry->id, entry->text, entry->locked, entry->count, entry->tag);
+    return clip_clipboard_entry_new(entry->id, entry->text, entry->locked, entry->count, entry->tag, entry->masked);
 }
 
 void clip_clipboard_entry_free(ClipboardEntry *entry)
@@ -160,4 +162,14 @@ gboolean clip_clipboard_entry_same(ClipboardEntry *a, ClipboardEntry *b)
         return FALSE;
     }
     return a->id == b->id;
+}
+
+gboolean clip_clipboard_entry_is_masked(ClipboardEntry *entry)
+{
+    return entry->masked;
+}
+
+void clip_clipboard_entry_set_masked(ClipboardEntry *entry, gboolean masked)
+{
+    entry->masked = masked;
 }

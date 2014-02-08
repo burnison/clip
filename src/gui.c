@@ -27,6 +27,8 @@
 #include "utils.h"
 
 #include <gtk/gtk.h>
+#include <math.h>
+#include <string.h>
 
 // Not owned.
 static Clipboard *clipboard;
@@ -148,7 +150,10 @@ static void clip_gui_menu_item_update(GtkWidget *menu_item)
     }
 
     char *text = clip_clipboard_entry_get_text(data->entry);
-    char *shortened = g_strndup(text, GUI_DISPLAY_CHARACTERS);
+    char *shortened = clip_clipboard_entry_is_masked(data->entry)
+        ? g_strnfill(MIN(GUI_DISPLAY_CHARACTERS, strlen(text)), GUI_MASK_CHAR)
+        : g_strndup(text, GUI_DISPLAY_CHARACTERS);
+
     GString *mask = g_string_new("%s");
 
     if(clip_clipboard_entry_get_locked(data->entry)){
@@ -299,6 +304,17 @@ static void clip_gui_do_edit(GtkWidget *selected_menu_item, gboolean promote)
     }
     clip_gui_editor_free_text(edited);
     clip_clipboard_entry_free(selected_entry);
+}
+
+static void clip_gui_do_mask(GtkWidget *selected_menu_item)
+{
+    if(selected_menu_item == NULL){
+        trace("Tried to join with no item selected.\n");
+        return;
+    }
+    ClipboardEntry *entry = clip_gui_get_entry_copy(selected_menu_item);
+    clip_clipboard_toggle_mask(clipboard, entry);
+    clip_clipboard_entry_free(entry);
 }
 
 static void clip_gui_do_join(GtkWidget *selected_menu_item)
@@ -462,6 +478,9 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
             case GDK_KEY_grave:
                 finding = TRUE;
                 update_required = FALSE;
+                break;
+            case GDK_KEY_asterisk:
+                clip_gui_do_mask(selected_menu_item);
                 break;
             default:
                 break;
