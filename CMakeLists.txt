@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 project(clip)
-set(CMAKE_C_FLAGS "-Wall -std=c11")
+set(CMAKE_C_FLAGS "-Wall -std=gnu11")
 
 include(FindPkgConfig)
 pkg_check_modules(GTK3 gtk+-3.0>=3.2.4)

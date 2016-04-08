@@ -51,6 +51,8 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    setenv("GDK_CORE_DEVICE_EVENTS", "1", 1);
+
     gtk_init(&argc, &argv);
 
     ClipboardProvider *provider = clip_provider_new();

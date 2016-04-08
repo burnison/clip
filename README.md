@@ -160,9 +160,5 @@ expected value.
 Known Issues
 ============
 
-* When using a window manager with "sloppy focus", you may need to set an environmental variable,
-  GDK_CORE_DEVICE_EVENTS=1, when running Clip. This seems to be an upstream bug in GTK3 that prevents the pop-up dialog
-  from rendering.
-
 * Clip interacts oddly with applications that do not use text-based clipboard contents (such as InkScape and
   LibreOffice). If you do not like how these programs interact, you can temporarily disable Clip's history.
