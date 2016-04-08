@@ -11,7 +11,7 @@ additional features not provided by other clipboard managers.
 Availability
 ------------
 
-Clip is offered under the GNU GPL 3 license and may be downloaded with Git at git://github.com/burnison/clip.git.
+Clip is offered under the MIT license and may be downloaded with Git at git://github.com/burnison/clip.git.
 
 
 
