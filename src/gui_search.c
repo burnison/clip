@@ -25,15 +25,15 @@
 #include <gtk/gtk.h>
 
 
-static GString *search_term;
-static int position;
+static GString *search_term = NULL;
+static int position = 0;
 
 /**
  * Identifies if a search is currenty in progress.
  */
 gboolean clip_gui_search_in_progress(void)
 {
-    return search_term != NULL;
+    return search_term == NULL ? FALSE : TRUE;
 }
 
 /**

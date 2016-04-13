@@ -33,21 +33,21 @@
 #include <string.h>
 
 // Not owned.
-static Clipboard *clipboard;
+static Clipboard *clipboard = NULL;
 
 // Owned.
-static GtkWidget *menu;
-static GtkWidget *menu_item_search;
-static GtkWidget *menu_item_clear;
-static GtkWidget *menu_item_history;
-static GtkWidget *menu_item_empty;
-static GtkWidget *menu_item_trim;
+static GtkWidget *menu = NULL;
+static GtkWidget *menu_item_search = NULL;
+static GtkWidget *menu_item_clear = NULL;
+static GtkWidget *menu_item_history = NULL;
+static GtkWidget *menu_item_empty = NULL;
+static GtkWidget *menu_item_trim = NULL;
 #ifdef DEBUG
-static GtkWidget *menu_item_exit;
+static GtkWidget *menu_item_exit = NULL;
 #endif
-static gboolean marking;
-static gboolean finding;
-static int rows;
+static gboolean marking = FALSE;
+static gboolean finding = FALSE;
+static int rows = 0;
 
 typedef struct {
     ClipboardEntry *entry;
@@ -429,9 +429,43 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
 {
     guint keyval = ((GdkEventKey*)event)->keyval;
     gboolean update_required = TRUE;
+    gboolean handled = TRUE;
 
     GtkWidget *selected_menu_item = clip_gui_get_selected_item();
-    if(!clip_gui_search_in_progress() && !marking && !finding){
+    if (marking) {
+        marking = clip_gui_do_mark(selected_menu_item, keyval);
+
+    } else if (finding) {
+        finding = clip_gui_activate_mark(keyval);
+        update_required = FALSE;
+
+    } else if (clip_gui_search_in_progress()){ 
+        switch(keyval){
+            case GDK_KEY_Escape:
+            case GDK_KEY_Down:
+            case GDK_KEY_Up:
+            case GDK_KEY_Page_Up:
+            case GDK_KEY_Page_Down:
+            case GDK_KEY_Home:
+            case GDK_KEY_End:
+            case GDK_KEY_Return:
+                clip_gui_search_end();
+                update_required = FALSE;
+                handled = FALSE;
+                break;
+            case GDK_KEY_BackSpace:
+                clip_gui_search_remove_char();
+                break;
+            case GDK_KEY_Tab:
+                clip_gui_search_increment_position();
+                break;
+            default:
+                clip_gui_search_append(keyval);
+                break;
+        }
+        clip_gui_select_search_match(TRUE);
+
+    } else {
         switch(keyval){
             case GUI_SEARCH_LEADER:
                 clip_gui_search_start();
@@ -485,39 +519,9 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
                 clip_gui_do_mask(selected_menu_item);
                 break;
             default:
+                handled = FALSE;
                 break;
         }
-    } else if(marking) {
-        marking = clip_gui_do_mark(selected_menu_item, keyval);
-
-    } else if (finding) {
-        finding = clip_gui_activate_mark(keyval);
-        update_required = FALSE;
-
-    } else if(clip_gui_search_in_progress()){ 
-        switch(keyval){
-            case GDK_KEY_Escape:
-            case GDK_KEY_Down:
-            case GDK_KEY_Up:
-            case GDK_KEY_Page_Up:
-            case GDK_KEY_Page_Down:
-            case GDK_KEY_Home:
-            case GDK_KEY_End:
-            case GDK_KEY_Return:
-                clip_gui_search_end();
-                update_required = FALSE;
-                break;
-            case GDK_KEY_BackSpace:
-                clip_gui_search_remove_char();
-                break;
-            case GDK_KEY_Tab:
-                clip_gui_search_increment_position();
-                break;
-            default:
-                clip_gui_search_append(keyval);
-                break;
-        }
-        clip_gui_select_search_match(TRUE);
     }
 
     if(update_required) {
@@ -525,7 +529,7 @@ static gboolean clip_gui_cb_keypress(GtkWidget *widget, GdkEvent *event, gpointe
     }
 
     // If search mode is turned on, drop all subsequent callbacks (like mnemonics).
-    return clip_gui_search_in_progress();
+    return handled || clip_gui_search_in_progress();
 }
 
 static gboolean clip_gui_cb_toggle_lock(GtkWidget *widget, GdkEvent *event, Data *data)
@@ -613,6 +617,7 @@ static void clip_gui_do_add_entry(ClipboardEntry *entry, int *row)
 static void clip_gui_prepare_menu(void)
 {
     trace("Preparing menu.\n");
+    clip_gui_search_end();
 
     gtk_container_foreach(GTK_CONTAINER(menu), (GtkCallback)clip_gui_cb_remove_menu_item, NULL);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item_search);
@@ -676,7 +681,6 @@ static void clip_gui_on_event(ClipboardEvent event, ClipboardEntry* entry)
 
 }
 
-
 void clip_gui_init(Clipboard *_clipboard)
 {
     trace("Creating new GUI menu.\n");
@@ -685,7 +689,6 @@ void clip_gui_init(Clipboard *_clipboard)
     clipboard = _clipboard;
 
     menu = gtk_menu_new();
-    gtk_widget_set_double_buffered(menu, TRUE);
     g_signal_connect(G_OBJECT(menu), "key-press-event", G_CALLBACK(clip_gui_cb_keypress), NULL);
 
     menu_item_search = g_object_ref(gtk_menu_item_new_with_label(GUI_SEARCH_MESSAGE));
